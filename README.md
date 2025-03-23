@@ -1,4 +1,4 @@
-# Plouton
+# Plouton - a System Management Mode (SMM) cheat framework
 <p align="center">
   <img src="/images/logo_plouton.jpg" alt="Picture of Plouton" width="600">
 </p>
