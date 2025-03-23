@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"C_Cpp.default.includePath": [
+			"${workspaceFolder}/edk2/MdePkg/Include",
+			"${workspaceFolder}/edk2/MdePkg/Include/X64"
+		]
+	}
+}

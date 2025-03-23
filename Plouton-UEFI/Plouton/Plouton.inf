@@ -1,0 +1,57 @@
+[defines]
+  INF_VERSION = 0x00010005 
+  BASE_NAME = Plouton
+  FILE_GUID = 95699d96-37f6-41b5-9e70-0db27ff5b096
+  MODULE_TYPE = DXE_DRIVER
+  PI_SPECIFICATION_VERSION       = 0x0001000A
+  ENTRY_POINT = UefiMain
+
+[Sources]
+  plouton.c
+  floats/floatlib.c
+  hardware/serial.c
+  hardware/timerRTC.c
+  hardware/timerPCH.c
+  hardware/xhci.c
+  memory/string.c
+  memory/memoryMapUEFI.c
+  memory/memory.c
+  memory/sigScan.c
+  os/windows/NTKernelTools.c
+  target/cs2/cheatCS2.c
+  target/cs2/math.c
+  target/hermes/hermes.c
+  hardware/audio/dummy.c
+  hardware/audio/corsair_wireless.c
+  hardware/audio/creative_usb_speakers.c
+  hardware/audio/hyperx_cloud_2.c
+  hardware/audio/logitech_g_pro_x_wireless.c
+  hardware/audio/logitech_g_pro_x_2_wireless.c
+  hardware/mouse/dummy.c
+  hardware/mouse/logitech_g_pro.c
+  hardware/mouse/logitech_g_pro_superlight.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  IntelFrameworkPkg/IntelFrameworkPkg.dec  
+  IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec  
+  StdLib/StdLib.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  PcdLib
+  BaseMemoryLib
+  DevicePathLib
+  PciLib
+
+[Protocols]
+  gEfiSmmCpuProtocolGuid
+
+[Depex]
+  TRUE
+
+[BuildOptions]
+ MSFT:*_*_*_CC_FLAGS     = -DUSE_COMPILER_INTRINSICS_LIB -D_CRT_SECURE_NO_WARNINGS -D_NO_CRT_STDIO_INLINE -D_OFF_T_DEFINED -D_off_t=int64_t -Doff_t=int64_t /wd4047 /wd4146 /wd4201 /wd4244 /wd4245 /wd4267 /wd4309 /wd4389 /wd4706 /wd4996 /wd4006 /wd4117
