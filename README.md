@@ -6,7 +6,9 @@
 *Plouton was the master of the underworld, and thus he was able to command the riches of the earth and the souls of the dead.*
 
 Plouton is a System Management Mode (SMM) (ring-2, *"underworld"*) PC game cheat framework.    
-This repository and code were created as proof-of-concept and released as open source, we do not take any responsibility for the further usage of this project.   
+This repository and code were created as proof-of-concept and released as open source, we do not take any responsibility for the further usage of this project.
+
+Check out this [video demonstration](https://www.youtube.com/watch?v=HoLtvFKOZzY) of Plouton's CS2 cheat implementation.
 
 # Supported platforms
 Plouton supports only Intel-based systems, for AMD-based systems some importants features (e.g. XHCI generating SMIs on USB Events) are not available). The core functionality and memory code would still be applicable, and could be reused.   
