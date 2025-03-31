@@ -25,7 +25,7 @@ We have prepared a fully working implementation for Counter-Strike 2 with the fo
  - Aimbot
  - Sound ESP
 
-For further information, see [cs2](Plouton-UEFI/Plouton/target/cs2).
+For further information, see [cs2](./cs2).
 
 ## Hermes
 We have implemented our previous project, [Hermes](https://github.com/pRain1337/hermes) into this project.   
