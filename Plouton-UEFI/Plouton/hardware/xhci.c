@@ -18,7 +18,7 @@ audioProfile_t audioProfile;
 
 // Offsets used
 UINT8 MBAROffset = 0x10;
-UINT8 DCABOffset = 0xB0;
+UINT8 DCABOffset = 0x30; // Intel XHCI Specs - Table 5-18: Host Controller Operational Registers
 
 
 /*
@@ -306,9 +306,22 @@ EFI_PHYSICAL_ADDRESS getDeviceContextArrayBase(EFI_PHYSICAL_ADDRESS base)
 		return 0;
 	}
 
-	// Return the DCAB from the offset
+	// Read length of the capability register
+	UINT8 CAPLENGTH = 0;
+	pMemCpyForce((EFI_PHYSICAL_ADDRESS)&CAPLENGTH, base, sizeof(UINT8));
+
+	// Check if we got valid length
+	if (CAPLENGTH == 0)
+	{
+		// Invalid base, return 0
+		LOG_ERROR("[XHC] Invalid CAPLENGTH read \r\n");
+
+		return 0;
+	}
+
+	// Return the DCAB from the dynamic offset
 	EFI_PHYSICAL_ADDRESS DCAB = 0;
-	pMemCpyForce((EFI_PHYSICAL_ADDRESS)&DCAB, base + DCABOffset, sizeof(EFI_PHYSICAL_ADDRESS));
+	pMemCpyForce((EFI_PHYSICAL_ADDRESS)&DCAB, base + CAPLENGTH + DCABOffset, sizeof(EFI_PHYSICAL_ADDRESS));
 
 	// Return the DCAB, we check validity later
 	return DCAB;
@@ -324,21 +337,60 @@ EFI_PHYSICAL_ADDRESS getDeviceContextArrayBase(EFI_PHYSICAL_ADDRESS base)
 */
 EFI_PHYSICAL_ADDRESS getMemoryBaseAddress()
 {
-	// Read the address from the PCI configuration space (Intel 18.1, page 817) of the XHCI (Device 0x14, Function 0x0)
-	EFI_PHYSICAL_ADDRESS MBAR = 0;
-	if (PciReadBuffer(PCI_LIB_ADDRESS(0, 0x14, 0x0, MBAROffset), 8, &MBAR) != 8)
+	// go through all PCI devices and check for class code 0xC0330 (XHCI controller)
+	for (UINT8 bus = 0; bus < 10; bus++)
 	{
-		// Failed reading 
-		LOG_ERROR("[XHC] Failed PciReadBuffer \r\n");
+		for (UINT8 device = 0; device < 32; device++)
+		{
+			for (UINT8 function = 0; function < 32; function++)
+			{
+				// Try to read the Register2
+				UINT32 Register2 = 0;
+				if (PciReadBuffer(PCI_LIB_ADDRESS(bus, device, function, 0x8), 4, &Register2) != 4)
+				{
+					// Failed reading 
+					LOG_VERB("[XHC] Failed PciReadBuffer \r\n");
 
-		return 0;
+					continue;
+				}
+
+				// Extract the values
+				// Bits 31-24 = Class code,				0x0C = Serial bus controllers
+				UINT8 ClassCode = (Register2 & 0xFF000000) >> 24;
+
+				// Bits 23-16 = Sub-class,				0x03 = USB
+				UINT8 SubClass = (Register2 & 0x00FF0000) >> 16;
+
+				// Bits 15-8 = Programming interface	0x30 = XHCI (USB 3.0)
+				UINT8 ProgIf = (Register2 & 0x0000FF00) >> 8;
+
+				// Successfully read it, compare it
+				if (ClassCode == 0x0C && SubClass == 0x03 && ProgIf == 0x30)
+				{
+					// Found a XHCI device
+					LOG_INFO("[XHC] Found XHCI device at bus 0x%x device 0x%x function 0x%x \r\n", bus, device, function);
+
+					// Try to read the MBAR
+					EFI_PHYSICAL_ADDRESS MBAR = 0;
+					if (PciReadBuffer(PCI_LIB_ADDRESS(bus, device, function, MBAROffset), 8, &MBAR) != 8)
+					{
+						// Failed reading 
+						LOG_ERROR("[XHC] Failed PciReadBuffer \r\n");
+
+						return 0;
+					}
+
+					LOG_INFO("[XHC] Found MBAR 0x%x \r\n", MBAR);
+
+					// Null last bits
+					MBAR = MBAR & 0xFFFFFFFFFFFFFF00;
+
+					// Return MBAR, we will check validity later
+					return MBAR;
+				}
+			}
+		}
 	}
-
-	// Null last bits
-	MBAR = MBAR & 0xFFFFFFFFFFFFFF00;
-
-	// Return MBAR, we will check validity later
-	return MBAR;
 }
 
 /*

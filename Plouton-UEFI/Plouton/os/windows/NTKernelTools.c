@@ -1177,10 +1177,12 @@ BOOLEAN fillModuleList64(const WinCtx* ctx, const WinProc* Process, WinModule* M
 		// Now get the address of the next entry by reading the current position as a pointer
 		vMemReadForce((EFI_PHYSICAL_ADDRESS)&head, head, sizeof(head), dirBase);
 
+		LOG_VERB("[NT] Next entry: %p\r\n", head);
+
 		// Check if this entry is valid by checking if the module has a valid name (String buffer is located out of struct)
 		if (mod->BaseDllName.buffer == 0)
 		{
-			LOG_INFO("[NT] Empty name\r\n");
+			LOG_VERB("[NT] Empty name\r\n");
 
 			// Doesnt mean the list is wrong, just that this entry was empty
 			// Just skip this one and try the next one
@@ -1190,7 +1192,7 @@ BOOLEAN fillModuleList64(const WinCtx* ctx, const WinProc* Process, WinModule* M
 		// The BaseDllName is a WCHAR, thus we have to convert it first
 
 		// Allocate a 64 byte buffer which should be enough for 99% of the module names
-		unsigned char wBuffer[0x40];
+		char wBuffer[0x40];
 
 		// Copy the WCHAR buffer into our buffer
 		vMemReadForce((EFI_PHYSICAL_ADDRESS)wBuffer, mod->BaseDllName.buffer, 0x40, dirBase);
@@ -1328,7 +1330,6 @@ BOOLEAN fillModuleList86(const WinCtx* ctx, const WinProc* Process, WinModule* M
 		// Set the current entry as previous entry as we will get the next entry shortly
 		prev = head;
 
-		// TO-DO 03.10.2024 - Change it so it doesnt actually allocated a buffer
 		// Prepare a buffer which will hold the LDR_MODULE32 containing information about the module
 		unsigned char modBuffer[sizeof(LDR_MODULE32)];
 
@@ -1388,10 +1389,10 @@ BOOLEAN fillModuleList86(const WinCtx* ctx, const WinProc* Process, WinModule* M
 		}
 
 		// Check if this is the module that was requested and not one of the excluded modules
-		if (!strcmp(Module->name, cBuffer) /* && (strcmp(Module->name, "panoramauiclient.dll") != 0) && (strcmp(Module->name, "steamclient.dll") != 0) */ ) // no proper matching means we filter out all other "client.dll" modules in cs2
+		if (!strcmp(Module->name, cBuffer))
 		{
 			// Found the module that was requested
-			LOG_INFO("[NT] 64 Found module \r\n");
+			LOG_INFO("[NT] 32 Found module \r\n");
 
 			// Set the values in the module struct that was passed
 			Module->baseAddress = mod->BaseAddress;

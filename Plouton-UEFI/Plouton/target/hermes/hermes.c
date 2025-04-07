@@ -63,6 +63,7 @@ BOOLEAN EFIAPI initializeHermes()
 
 	// Get hermes.exe module, prepare Module list
 	hermesModule.name = hermesProcessName;
+
 	status = dumpSingleModule(winGlobal, &hermesProcess, &hermesModule);
 
 	if (status == FALSE)
