@@ -20,10 +20,10 @@ typedef struct _mouseProfile {
 // Define function pointer types
 #ifdef __GNUC__
 typedef BOOLEAN EFIAPI (*MouseDriverTdCheck)(EFI_PHYSICAL_ADDRESS);
-typedef mouseProfile_t EFIAPI (*InitMouseDriver)(MouseDriverTdCheck);
+typedef mouseProfile_t EFIAPI (*InitMouseDriver)(MouseDriverTdCheck, EFI_PHYSICAL_ADDRESS);
 #else
 typedef BOOLEAN (*MouseDriverTdCheck)(EFI_PHYSICAL_ADDRESS);
-typedef mouseProfile_t (*InitMouseDriver)(MouseDriverTdCheck);
+typedef mouseProfile_t (*InitMouseDriver)(MouseDriverTdCheck, EFI_PHYSICAL_ADDRESS);
 #endif
 
 typedef struct _mouseInitFuns {
@@ -37,11 +37,11 @@ typedef struct _mouseInitFuns {
     BOOLEAN EFIAPI mouseDummyDriverTdCheck(EFI_PHYSICAL_ADDRESS TDPointerPhys);
 #endif
 #ifdef MOUSE_DRIVER_LOGITECH_G_PRO_SUPERLIGHT
-    mouseProfile_t EFIAPI initLogitechGProSuperlightMouseXHCI(MouseDriverTdCheck MouseDriverTdCheckFun);
+    mouseProfile_t EFIAPI initLogitechGProSuperlightMouseXHCI(MouseDriverTdCheck MouseDriverTdCheckFun, EFI_PHYSICAL_ADDRESS MBAR);
     BOOLEAN EFIAPI mouseLogitechGProSuperlightDriverTdCheck(EFI_PHYSICAL_ADDRESS TDPointerPhys);
 #endif
 #ifdef MOUSE_DRIVER_LOGITECH_G_PRO
-    mouseProfile_t EFIAPI initLogitechGProMouseXHCI(MouseDriverTdCheck MouseDriverTdCheckFun);
+    mouseProfile_t EFIAPI initLogitechGProMouseXHCI(MouseDriverTdCheck MouseDriverTdCheckFun, EFI_PHYSICAL_ADDRESS MBAR);
     BOOLEAN EFIAPI mouseLogitechGProDriverTdCheck(EFI_PHYSICAL_ADDRESS TDPointerPhys);
 #endif
 

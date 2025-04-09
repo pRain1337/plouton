@@ -12,11 +12,12 @@
 * Tries to initialize the mouse driver for the Logitech G Pro Superlight mouse.
 *
 *  MouseDriverTdCheck:			Pointer to the "MouseDriverTdCheck" function that is used to verify the device packets
+*  MBAR:						EFI_PHYSICAL_ADDRESS pointer to the Memory base address of the XHCI controller
 *
 *  returns:	The mouseProfile struct, initialized set As TRUE if it was found
 *
 */
-mouseProfile_t EFIAPI initLogitechGProSuperlightMouseXHCI(MouseDriverTdCheck MouseDriverTdCheckFun)
+mouseProfile_t EFIAPI initLogitechGProSuperlightMouseXHCI(MouseDriverTdCheck MouseDriverTdCheckFun, EFI_PHYSICAL_ADDRESS MBAR)
 {
 	// This implementation is based on the following documents:
 	// - Intel 600 series datasheet see: https://www.intel.com/content/www/us/en/content-details/742460/intel-600-series-chipset-family-for-iot-edge-platform-controller-hub-pch-datasheet-volume-2-of-2.html
@@ -25,8 +26,6 @@ mouseProfile_t EFIAPI initLogitechGProSuperlightMouseXHCI(MouseDriverTdCheck Mou
 	mouseProfile_t ret = { 0, 0, 0, 0, 0, 0 };
 
 	// (Intel 18.1.11, Page 822) First we get the MBAR of the XHCI device
-	EFI_PHYSICAL_ADDRESS MBAR = getMemoryBaseAddress();
-
 	// Check if we got a valid MBAR
 	if (MBAR == 0)
 	{
@@ -51,7 +50,7 @@ mouseProfile_t EFIAPI initLogitechGProSuperlightMouseXHCI(MouseDriverTdCheck Mou
 	}
 
 	LOG_INFO("[XHC] Found DCAB %p\r\n", DCAB);
- 
+
 	//Check for  Logitech G Pro Mouse (Superlight)
 	EFI_PHYSICAL_ADDRESS endpointRing = getEndpointRing(DCAB, 7, 0x40, 0x20, FALSE, MouseDriverTdCheckFun); // Hardcoded for now
 
@@ -103,6 +102,7 @@ mouseProfile_t EFIAPI initLogitechGProSuperlightMouseXHCI(MouseDriverTdCheck Mou
 		// Return the pointer to the transfer buffer to indicate successful execution
 		return ret_valid;
 	}
+
 	return ret;
 }
 

@@ -22,7 +22,7 @@ Copyright (c) pRain1337 & Jussihi  All rights reserved.
 extern EFI_SYSTEM_TABLE* gST;
 extern EFI_BOOT_SERVICES* gBS;
 
-// from NTKernelTools.h
+// from NTKernelTools.c
 extern WinCtx* winGlobal;
 extern BOOLEAN setupWindows;
 
@@ -183,6 +183,11 @@ EFI_STATUS EFIAPI SmmCallHandle(EFI_HANDLE DispatchHandle, IN CONST VOID *Contex
 					startSeconds = FALSE;
 					targets[i].initialized = FALSE;
 					targets[i].dirBase = 0;
+				}
+				else
+				{
+					// Directory base still the same, try to re-initialize the XHCI in case the USB device changed port
+					initXHCI();
 				}
 
 				// Reset the SMI counter so we perform the same activity again in 10000 SMIs
