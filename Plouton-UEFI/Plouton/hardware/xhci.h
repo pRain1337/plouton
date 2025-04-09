@@ -10,6 +10,7 @@
 // our includes
 #include "../target/cs2/structuresCS2.h"
 #include "../memory/memory.h"
+#include "../memory/string.h"
 #include "../hardware/serial.h"
 #include "../general/config.h"
 #include "mouse/mouseDriver.h"
@@ -54,6 +55,13 @@ BOOLEAN mouseInitialized();
 EFI_PHYSICAL_ADDRESS getMemoryBaseAddress();
 
 /*
+* Function:  getMemoryBaseAddresses
+* --------------------
+* This function finds all XHCI controllers in the system and writes it into the passed array
+*/
+BOOLEAN getMemoryBaseAddresses(EFI_PHYSICAL_ADDRESS* mbars);
+
+/*
 * Function:  getDeviceContextArrayBase
 * --------------------
 * This function returns the Device Context Array Base (DCAB) which contains all USB devices in the system.
@@ -66,13 +74,6 @@ EFI_PHYSICAL_ADDRESS getDeviceContextArrayBase(EFI_PHYSICAL_ADDRESS base);
 * This function finds a specific endpoint of a device by searching for specific specifications.
 */
 EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextType, UINT16 contextPacketsize, UINT16 contextAveragetrblength, BOOLEAN isAudio, MouseDriverTdCheck MouseDriverTdCheckFun);
-
-/*
-* Function:  getCurrentTransferbuffer
-* --------------------
-* This function returns the transfer buffer of a device endpoint.
-*/
-EFI_PHYSICAL_ADDRESS getCurrentTransferbuffer(EFI_PHYSICAL_ADDRESS endpoint_ring);
 
 // - Manipulation related functions
 

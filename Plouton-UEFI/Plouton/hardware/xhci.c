@@ -20,7 +20,6 @@ audioProfile_t audioProfile;
 UINT8 MBAROffset = 0x10;
 UINT8 DCABOffset = 0x30; // Intel XHCI Specs - Table 5-18: Host Controller Operational Registers
 
-
 /*
 * Function:  initXHCI
 * --------------------
@@ -33,27 +32,61 @@ BOOLEAN initXHCI()
 {
 	LOG_INFO("[XHC] Initializing XHCI... \r\n");
 
-	// Go through all activated audio drivers
-	for (int i = 0; i < sizeof(InitAudioDriverFuns) / sizeof(InitAudioDriverFun); i++)
+	// Create an array to contain a maximum of 16 XHCI controllers
+	EFI_PHYSICAL_ADDRESS mbars[16];
+
+	// Null the local array
+	nullBuffer((EFI_PHYSICAL_ADDRESS)mbars, sizeof(EFI_PHYSICAL_ADDRESS) * 16);
+
+	// Find the MBARs of all XHCI controllers
+	if (getMemoryBaseAddresses(mbars))
 	{
-		audioProfile = InitAudioDriverFuns[i]();
-		if (audioProfile.initialized == TRUE)
+		LOG_INFO("[XHC] Found atleast one XHCI controller! \r\n");
+	}
+	else
+	{
+		// Did not find any XHCI controller...
+		LOG_ERROR("[XHC] Failed finding any XHCI controller... \r\n");
+
+		return FALSE;
+	}
+
+	// Go through all MBARs in the array
+	for (int m = 0; m < 16; m++)
+	{
+		// Check if this entry is valid
+		if (mbars[m] == 0)
+			continue;
+
+		// Go through all activated audio drivers
+		if (mouseProfile.initialized == FALSE)
 		{
-			LOG_INFO("[XHC] Found supported audio driver! \r\n");
-			break;
+			for (int i = 0; i < sizeof(InitAudioDriverFuns) / sizeof(InitAudioDriverFun); i++)
+			{
+				audioProfile = InitAudioDriverFuns[i](mbars[m]);
+				if (audioProfile.initialized == TRUE)
+				{
+					LOG_INFO("[XHC] Found supported audio driver! \r\n");
+					break;
+				}
+			}
+		}
+
+		// Go through all activated mouse drivers
+		if (mouseProfile.initialized == FALSE)
+		{
+			for (int i = 0; i < sizeof(InitMouseDriversFuns) / sizeof(mouseInitFuns); i++)
+			{
+				mouseProfile = InitMouseDriversFuns[i].InitMouseDriverFun(InitMouseDriversFuns[i].MouseDriverTdCheckFun, mbars[m]);
+				if (mouseProfile.initialized == TRUE)
+				{
+					LOG_INFO("[XHC] Found supported mouse driver! \r\n");
+					break;
+				}
+			}
 		}
 	}
 
-	// Go through all activated mouse drivers
-	for (int i = 0; i < sizeof(InitMouseDriversFuns) / sizeof(mouseInitFuns); i++)
-	{
-		mouseProfile = InitMouseDriversFuns[i].InitMouseDriverFun(InitMouseDriversFuns[i].MouseDriverTdCheckFun);
-		if (mouseProfile.initialized == TRUE)
-		{
-			LOG_INFO("[XHC] Found supported mouse driver! \r\n");
-			break;
-		}
-	}
 
 	// Atleast one of those should be activated for XHCI to be considered activated
 	return audioProfile.initialized | mouseProfile.initialized;
@@ -391,7 +424,93 @@ EFI_PHYSICAL_ADDRESS getMemoryBaseAddress()
 			}
 		}
 	}
+
+	return 0;
 }
+
+/*
+* Function:  getMemoryBaseAddresses
+* --------------------
+* This function writes the MBAR addresses of the XHCI controllers in the passed array pointer.
+*
+*  returns:	0 (FALSE) if it fails, otherwise it 1 (TRUE)
+*
+*/
+BOOLEAN getMemoryBaseAddresses(EFI_PHYSICAL_ADDRESS *mbars)
+{
+	UINT8 index = 0;
+
+	// go through all PCI devices and check for class code 0xC0330 (XHCI controller)
+	for (UINT8 bus = 0; bus < 10; bus++)
+	{
+		for (UINT8 device = 0; device < 32; device++)
+		{
+			for (UINT8 function = 0; function < 32; function++)
+			{
+				// Try to read the Register2
+				UINT32 Register2 = 0;
+				if (PciReadBuffer(PCI_LIB_ADDRESS(bus, device, function, 0x8), 4, &Register2) != 4)
+				{
+					// Failed reading 
+					LOG_VERB("[XHC] Failed PciReadBuffer \r\n");
+
+					continue;
+				}
+
+				// Extract the values
+				// Bits 31-24 = Class code,				0x0C = Serial bus controllers
+				UINT8 ClassCode = (Register2 & 0xFF000000) >> 24;
+
+				// Bits 23-16 = Sub-class,				0x03 = USB
+				UINT8 SubClass = (Register2 & 0x00FF0000) >> 16;
+
+				// Bits 15-8 = Programming interface	0x30 = XHCI (USB 3.0)
+				UINT8 ProgIf = (Register2 & 0x0000FF00) >> 8;
+
+				// Successfully read it, compare it
+				if (ClassCode == 0x0C && SubClass == 0x03 && ProgIf == 0x30)
+				{
+					// Found a XHCI device
+					LOG_INFO("[XHC] Found XHCI device at bus 0x%x device 0x%x function 0x%x \r\n", bus, device, function);
+
+					// Try to read the MBAR
+					EFI_PHYSICAL_ADDRESS MBAR = 0;
+					if (PciReadBuffer(PCI_LIB_ADDRESS(bus, device, function, MBAROffset), 8, &MBAR) != 8)
+					{
+						// Failed reading 
+						LOG_ERROR("[XHC] Failed PciReadBuffer \r\n");
+
+						continue;
+					}
+
+					LOG_INFO("[XHC] Found MBAR 0x%x \r\n", MBAR);
+
+					// Null last bits
+					MBAR = MBAR & 0xFFFFFFFFFFFFFF00;
+
+					// Add the MBAR to the list
+					if (index > 16)
+					{
+						// MBAR Array would be out of bounds 
+						LOG_ERROR("[XHC] Mbars out of bounds \r\n");
+
+						return FALSE;
+					}
+
+					mbars[index] = MBAR;
+					index += 1;
+				}
+			}
+		}
+	}
+
+	// Return true if we found atleast one MBAR
+	if (index > 0)
+		return TRUE;
+
+	return FALSE;
+}
+
 
 /*
 * Function:  BeepXHCI

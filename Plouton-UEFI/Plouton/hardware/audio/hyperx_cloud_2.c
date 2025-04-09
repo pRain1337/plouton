@@ -10,11 +10,13 @@
 * Function:  initHyperXCloud2AudioXHCI
 * --------------------
 * Tries to initialize the audio driver for the Hyper X Cloud 2 headset.
+* 
+*  MBAR:						EFI_PHYSICAL_ADDRESS pointer to the Memory base address of the XHCI controller
 *
 *  returns:	The audioProfile struct, initialized set As TRUE if it was found
 *
 */
-audioProfile_t initHyperXCloud2AudioXHCI()
+audioProfile_t initHyperXCloud2AudioXHCI(EFI_PHYSICAL_ADDRESS MBAR)
 {
     audioProfile_t ret = { 0, 0 };
     // This implementation is based on the following documents:
@@ -22,8 +24,6 @@ audioProfile_t initHyperXCloud2AudioXHCI()
 	// - The SMM Rootkit Revisited: Fun with USB https://papers.put.as/papers/firmware/2014/schiffman2014.pdf
 
 	// (Intel 18.1.11, Page 822) First we get the MBAR of the XHCI device
-	EFI_PHYSICAL_ADDRESS MBAR = getMemoryBaseAddress();
-
 	// Check if we got a valid MBAR
 	if (MBAR == 0)
 	{
