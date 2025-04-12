@@ -135,6 +135,7 @@ BOOLEAN mouseInitialized()
 EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextType, UINT16 contextPacketsize, UINT16 contextAveragetrblength, BOOLEAN isAudio, MouseDriverTdCheck MouseDriverTdCheckFun)
 {
 	LOG_VERB("[XHC] Checking for Type 0x%x Packetsize 0x%x Average TRB Length 0x%x isAudio %d \r\n", contextType, contextPacketsize, contextAveragetrblength, isAudio);
+
 	// Loop through all device contexts, theres no length identifier but max possible is 64 (Skip hubs, dont connect mouse over hub)
 	for (UINT8 i = 0; i < 64; i++)
 	{
@@ -159,8 +160,11 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 			context = context & 0xFFFFFFFFFFFF00;
 
 			// Read the root port number of this device
+			//  - Slot Context Field			- offset 0x04, size 32-bit
+			//		-	Root Hub Port Number	- Bits 23:16	(Intel eXtensible Host Controller Interface for USB, Table 6-5, Page 445, Root Hub Port Number)
+			//				Port number is at offset 0x02 in the 32-bit value. We can directly access it by using offset 0x06
 			UINT8 RootPortNumber = 0;
-			status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&RootPortNumber, context + 0x6, sizeof(UINT8));
+			status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&RootPortNumber, context + 0x06, sizeof(UINT8));
 
 			// Check if the device has a root port number
 			if (RootPortNumber == 0 || status == FALSE)
@@ -176,11 +180,15 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 				LOG_VERB("[XHC] Found valid device on port %d \r\n", RootPortNumber);
 
 				// Read the amount of endpoints the device has
+				//  - Slot Context Field		- offset 0x04, size 32-bit
+				//		-	Context Entries		- Bits 31:27			(Intel eXtensible Host Controller Interface for USB, Table 6-4, Page 445, Context Entries)
+				//				Port number is at offset 0x03 in the 32-bit value. We can directly access it using offset 0x03.
+				//				As the value is only 5-bits, we will have to perform a right-shift 3 to get the right context entries amount.
 				UINT8 endpointAmount = 0;
 				UINT8 slotContextEntries = 0;
-				status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&slotContextEntries, context + 0x3, sizeof(UINT8));
+				status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&slotContextEntries, context + 0x03, sizeof(UINT8));
 
-				// XHCI stores them strange, convert it to a valid entry
+				// Perform a right-shift 3 to get the context entries	(Intel eXtensible Host Controller Interface for USB, Table 6-4, Page 445, Context Entries)
 				slotContextEntries = slotContextEntries >> 3;
 
 				// Check if the device has endpoints
@@ -192,7 +200,7 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 					continue;
 				}
 
-				// A endpoint can have 2 slot context entries (in & out), thus we calculate the endpoint amount based on if its an odd number
+				// An endpoint can have 2 slot context entries (in & out), thus we calculate the endpoint amount based on if its an odd number
 				if (slotContextEntries >= 2)
 				{
 					// Check if its dividable by 2
@@ -218,12 +226,15 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 				{
 					LOG_DBG("[XHC] Check: %p\r\n", endpointBase + (j * 0x20) + 0x4);
 
-					// Get endpoint type
+					// Read the endpoint type
+					//  - Endpoint Context Field	- offset 0x04, size 32-bit
+					//		-	Endpoint Type		- Bits 5:3		(Intel eXtensible Host Controller Interface for USB, Table 6-9, Page 452, Endpoint Type (EP Type))
+					//				As the type is only 3 bits, we will have to clear the topmost bit and perform a right shift by 3.
 					UINT8 endpointType = 0;
-					status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&endpointType, endpointBase + (j * 0x20) + 0x4, sizeof(UINT8));
+					status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&endpointType, endpointBase + (j * 0x20) + 0x04, sizeof(UINT8));
 
-					// Calculate the proper endpoint type
-					endpointType = endpointType >> 3;
+					// Calculate the proper endpoint type by clearing topmost bit and performing a right shift by 3
+					endpointType = (endpointType & 0x7F) >> 3;
 
 					LOG_VERB("[XHC] Endpoint %d type: %p\r\n", j, endpointType);
 
@@ -237,8 +248,11 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 					}
 
 					// Get endpoint max packetsize
+					//  - Endpoint Context Field	- offset 0x04, size 32-bit
+					//		-	Max Packet Size		- Bits 31:16		(Intel eXtensible Host Controller Interface for USB, Table 6-9, Page 452, Max Packet Size)
+					//				As the max packet size is offset 0x02 in the 32-bit value, directly access it using offset 0x06
 					UINT16 endpointMaxPacketsize = 0;
-					status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&endpointMaxPacketsize, endpointBase + (j * 0x20) + 0x6, sizeof(UINT16));
+					status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&endpointMaxPacketsize, endpointBase + (j * 0x20) + 0x06, sizeof(UINT16));
 
 					LOG_DBG("[XHC] Endpoint %d Maxpacketsize: %p\r\n", i, endpointMaxPacketsize);
 
@@ -251,6 +265,8 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 					}
 
 					// Get endpoint avg trb length
+					//	- Endpoint Context Field	- offset 0x10, size 32-bit
+					//		- Average TRB Length	- Bits 15:0		(Intel eXtensible Host Controller Interface for USB, Table 6-11, Page 453, Average TRB Length)
 					UINT16 endpointAveragetrblength = 0;
 					status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&endpointAveragetrblength, endpointBase + (j * 0x20) + 0x10, sizeof(UINT16));
 
@@ -264,11 +280,13 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 						continue;
 					}
 
-					// Endpoint has the same values as the passed one, now get the transfer ring at offset 0x8
+					// Endpoint has the same values as the passed one, now get the transfer ring at offset 0x08 Table 6-10: Offset 08h
+					//	- Endpoint Context Field	- offset 0x08, size 64-bit
+					//		- TR Dequeue Pointer	- Bits 63:4		(Intel eXtensible Host Controller Interface for USB, Table 6-10, Page 453, TR Dequeue Pointer)
 					EFI_PHYSICAL_ADDRESS transfer_ring = 0;
-					status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&transfer_ring, endpointBase + (j * 0x20) + 0x8, sizeof(EFI_PHYSICAL_ADDRESS));
+					status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&transfer_ring, endpointBase + (j * 0x20) + 0x08, sizeof(EFI_PHYSICAL_ADDRESS));
 
-					// Null the first 4 bits
+					// Null the first 4 bits as they are states & reserved bits
 					transfer_ring = transfer_ring & 0xFFFFFFFFFFFFFF0;
 
 					// Check if we got a valid transfer ring
@@ -285,6 +303,11 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 					for (UINT16 k = 0; k <= 14; k++)
 					{
 						// Now get the Physical URB Enqueue Ring from the transfer ring
+						// We use 0x20 steps, as upon a Normal TRB (Intel eXtensible Host Controller Interface for USB, 4.11.2.1, Page 211, Normal TRB), we have always observed an Event Data TRB (Intel eXtensible Host Controller Interface for USB, 4.11.5.2, Page 230, Event Data TRB)
+						// For more information how transfer rings work, check out the following:
+						//		- 	Intel eXtensible Host Controller Interface for USB, 4.9, Page 166, TRB Ring
+						//		-	Intel eXtensible Host Controller Interface for USB, 4.11, Page 208, TRBs
+						//		-	Intel eXtensible Host Controller Interface for USB, 6.4, Page 465, Transfer Request Block (TRB)
 						EFI_PHYSICAL_ADDRESS TDPointerPhys = 0;
 						status = pMemCpyForce((EFI_PHYSICAL_ADDRESS)&TDPointerPhys, transfer_ring + (k * 0x20), sizeof(EFI_PHYSICAL_ADDRESS));
 

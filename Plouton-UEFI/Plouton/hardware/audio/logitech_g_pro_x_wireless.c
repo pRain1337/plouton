@@ -18,12 +18,14 @@
 */
 audioProfile_t initLogitechGProXAudioXHCI(EFI_PHYSICAL_ADDRESS MBAR)
 {
-    audioProfile_t ret = { 0, 0 };
-    // This implementation is based on the following documents:
+	// This implementation is based on the following documents:
 	// - Intel 600 series datasheet see: https://www.intel.com/content/www/us/en/content-details/742460/intel-600-series-chipset-family-for-iot-edge-platform-controller-hub-pch-datasheet-volume-2-of-2.html
 	// - The SMM Rootkit Revisited: Fun with USB https://papers.put.as/papers/firmware/2014/schiffman2014.pdf
+	// - eXtensible Host Controller Interface for Universal Serial Bus (xHCI) https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/extensible-host-controler-interface-usb-xhci.pdf
 
-	// (Intel 18.1.11, Page 822) First we get the MBAR of the XHCI device
+	audioProfile_t ret = { 0, 0 };
+
+	// (Intel 600 series datasheet, 18.1.11, Page 822) First we get the MBAR of the XHCI device
 	// Check if we got a valid MBAR
 	if (MBAR == 0)
 	{
@@ -35,7 +37,7 @@ audioProfile_t initLogitechGProXAudioXHCI(EFI_PHYSICAL_ADDRESS MBAR)
 
 	LOG_INFO("[XHC] Found MBAR %p\r\n", MBAR);
 
-	// (Intel x.x.x, Page xxx) Now that we have the MBAR we can access the Memory Mapped registers, use it to get the Device Context Array Base Pointer which contains pointers to the devices.
+	// (Intel eXtensible Host Controller Interface for USB, 5.4, Page 391) Now that we have the MBAR we can access the Memory Mapped registers, use it to get the Device Context Array Base Pointer which contains pointers to the devices.
 	EFI_PHYSICAL_ADDRESS DCAB = getDeviceContextArrayBase(MBAR);
 
 	// Check if we got a valid DCAB
@@ -50,9 +52,12 @@ audioProfile_t initLogitechGProXAudioXHCI(EFI_PHYSICAL_ADDRESS MBAR)
 	LOG_INFO("[XHC] Found DCAB %p\r\n", DCAB);
 
 	// Now as we have the DCAB, we scan all of the devices for the following specifications:
-	//	- contextType				- offset 0x4
-	//	- contextPacketsize			- offset 0x6
-	//  - contextAveragetrblength	- offset 0x10
+	//  - Endpoint Context Field	- offset 0x04, size 32-bit
+	//		-	Endpoint Type		- Bits 5:3		(Intel eXtensible Host Controller Interface for USB, Table 6-9, Page 452, Endpoint Type (EP Type))
+	//		-	Max Packet Size		- Bits 31:16	(Intel eXtensible Host Controller Interface for USB, Table 6-9, Page 452, Max Packet Size)
+	// 
+	//	- Endpoint Context Field	- offset 0x10, size 32-bit
+	//		- Average TRB Length	- Bits 15:0		(Intel eXtensible Host Controller Interface for USB, Table 6-11, Page 453, Average TRB Length)
 
 	// Check for Logitech G Pro X Wireless Headset
 	ret.audioRingLocation = getEndpointRing(DCAB, 1, 0x120, 0x90, TRUE, NULL); // Hardcoded for now
