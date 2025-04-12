@@ -40,7 +40,9 @@ At offset 0x10, you can find the 64-bit pointer of the Memory Base address (MBAR
 ![RWEverything showing the PCI Config space and offset to the Memory Base Address](/images/XHCI_MemoryBaseAddress.png)
 
 #### Device Context Array Base (DCAB)
-Now access this MBAR using the Memory option in RWEverything, and note down the value at offset 0xB0 as this is the 64-bit pointer of the Device Context Array Base (DCAB).
+Now access this MBAR using the Memory option in RWEverything, and read the 8-bit value of the capability register length.   
+This length (0x80 in the picture) is used to skip the capability register, as afterwards the Host Operational register follows.   
+At offset 0x30 in the Host Operational register we can finally read the Device Context Array Base (DCAB) (Final address: MBAR Address + Capability register length + 0x30 = 0xB0).   
 This points to an array containing pointers to each connected USB device on the system.
 ![RWEverything showing the Memory Base Address and offset to the Device Context Array Base](/images/XHCI_DeviceContextArrayBase.png)
 
@@ -62,11 +64,11 @@ To identify the right endpoint, navigate to the memory address at offset 0x8, wh
 Each packet received/sent via this endpoint will be written to this ring top to down, thus the right endpoint can be identified by interacting with the device (e.g. move mouse or play music).
 
 When the right endpoint is identified, note down the following values:
-  -  Type: Offset 0x4, 8-bit value, perform a right shift 3 for the type value.
+  -  Type: Offset 0x4, read 8-bit value, perform a right shift 3 for the type value (3-bit size, in bits 5:3).
   -  Max packet size: Offset 0x6, 16-bit value.
   -  Average TRB Length: Offset 0x10, 16-bit value.
 
-For further information, see the XHCI specification from Intel (eXtensible Host Controller Interface for Universal Serial Bus (xHCI), Table 6-9: Offset 04h - Endpoint Context Field Definitions).   
+For further information, see our implementation in [xhci.c](xhci.c) or the XHCI specification from Intel (eXtensible Host Controller Interface for Universal Serial Bus (xHCI), Table 6-9 until 6-11).   
 
 To further limit the number of endpoints down and prevent conflicts, also analyze the raw packet that can be found in the transfer ring previously identified.
 For newer Logitech mouses, we have identified the magic value "0x409301" at offset 0x8 which we use to 100% identify it as our device.
