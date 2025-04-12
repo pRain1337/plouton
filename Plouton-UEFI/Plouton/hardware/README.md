@@ -65,6 +65,7 @@ When the right endpoint is identified, note down the following values:
   -  Type: Offset 0x4, 8-bit value, perform a right shift 3 for the type value.
   -  Max packet size: Offset 0x6, 16-bit value.
   -  Average TRB Length: Offset 0x10, 16-bit value.
+
 For further information, see the XHCI specification from Intel (eXtensible Host Controller Interface for Universal Serial Bus (xHCI), Table 6-9: Offset 04h - Endpoint Context Field Definitions).   
 
 To further limit the number of endpoints down and prevent conflicts, also analyze the raw packet that can be found in the transfer ring previously identified.
