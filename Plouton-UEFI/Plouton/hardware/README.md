@@ -62,9 +62,10 @@ To identify the right endpoint, navigate to the memory address at offset 0x8, wh
 Each packet received/sent via this endpoint will be written to this ring top to down, thus the right endpoint can be identified by interacting with the device (e.g. move mouse or play music).
 
 When the right endpoint is identified, note down the following values:
-  -  Type: Offset 0x4, 8-bit value, perform a left shift 3 for the correct value.
+  -  Type: Offset 0x4, 8-bit value, perform a right shift 3 for the type value.
   -  Max packet size: Offset 0x6, 16-bit value.
   -  Average TRB Length: Offset 0x10, 16-bit value.
+For further information, see the XHCI specification from Intel (eXtensible Host Controller Interface for Universal Serial Bus (xHCI), Table 6-9: Offset 04h - Endpoint Context Field Definitions).   
 
 To further limit the number of endpoints down and prevent conflicts, also analyze the raw packet that can be found in the transfer ring previously identified.
 For newer Logitech mouses, we have identified the magic value "0x409301" at offset 0x8 which we use to 100% identify it as our device.
