@@ -48,13 +48,6 @@ BOOLEAN audioInitialized();
 BOOLEAN mouseInitialized();
 
 /*
-* Function:  getMemoryBaseAddress
-* --------------------
-* This function returns the MBAR address of the XHCI which is required to find the devices.
-*/
-EFI_PHYSICAL_ADDRESS getMemoryBaseAddress();
-
-/*
 * Function:  getMemoryBaseAddresses
 * --------------------
 * This function finds all XHCI controllers in the system and writes it into the passed array

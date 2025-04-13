@@ -184,11 +184,6 @@ EFI_STATUS EFIAPI SmmCallHandle(EFI_HANDLE DispatchHandle, IN CONST VOID *Contex
 					targets[i].initialized = FALSE;
 					targets[i].dirBase = 0;
 				}
-				else
-				{
-					// Directory base still the same, try to re-initialize the XHCI in case the USB device changed port
-					initXHCI();
-				}
 
 				// Reset the SMI counter so we perform the same activity again in 10000 SMIs
 				currSMIamount = 0;

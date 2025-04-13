@@ -136,7 +136,7 @@ EFI_PHYSICAL_ADDRESS getEndpointRing(EFI_PHYSICAL_ADDRESS DCAB, UINT16 contextTy
 {
 	LOG_VERB("[XHC] Checking for Type 0x%x Packetsize 0x%x Average TRB Length 0x%x isAudio %d \r\n", contextType, contextPacketsize, contextAveragetrblength, isAudio);
 
-	// Loop through all device contexts, theres no length identifier but max possible is 64 (Skip hubs, dont connect mouse over hub)
+	// Loop through all device contexts, theres no length identifier but max possible is 64 (Skip hubs, don't connect mouse over hub)
 	for (UINT8 i = 0; i < 64; i++)
 	{
 		// Use status variable to indicate success
@@ -384,74 +384,6 @@ EFI_PHYSICAL_ADDRESS getDeviceContextArrayBase(EFI_PHYSICAL_ADDRESS base)
 }
 
 /*
-* Function:  getMemoryBaseAddress
-* --------------------
-* This function returns the memory based address registers of the XHCI by reading it from the PCI configuration space.
-*
-*  returns:	0 if it fails, otherwise it returns the address of the DCAB as EFI_PHYSICAL_ADDRESS
-*
-*/
-EFI_PHYSICAL_ADDRESS getMemoryBaseAddress()
-{
-	// go through all PCI devices and check for class code 0xC0330 (XHCI controller)
-	for (UINT8 bus = 0; bus < 10; bus++)
-	{
-		for (UINT8 device = 0; device < 32; device++)
-		{
-			for (UINT8 function = 0; function < 32; function++)
-			{
-				// Try to read the Register2
-				UINT32 Register2 = 0;
-				if (PciReadBuffer(PCI_LIB_ADDRESS(bus, device, function, 0x8), 4, &Register2) != 4)
-				{
-					// Failed reading 
-					LOG_VERB("[XHC] Failed PciReadBuffer \r\n");
-
-					continue;
-				}
-
-				// Extract the values
-				// Bits 31-24 = Class code,				0x0C = Serial bus controllers
-				UINT8 ClassCode = (Register2 & 0xFF000000) >> 24;
-
-				// Bits 23-16 = Sub-class,				0x03 = USB
-				UINT8 SubClass = (Register2 & 0x00FF0000) >> 16;
-
-				// Bits 15-8 = Programming interface	0x30 = XHCI (USB 3.0)
-				UINT8 ProgIf = (Register2 & 0x0000FF00) >> 8;
-
-				// Successfully read it, compare it
-				if (ClassCode == 0x0C && SubClass == 0x03 && ProgIf == 0x30)
-				{
-					// Found a XHCI device
-					LOG_INFO("[XHC] Found XHCI device at bus 0x%x device 0x%x function 0x%x \r\n", bus, device, function);
-
-					// Try to read the MBAR
-					EFI_PHYSICAL_ADDRESS MBAR = 0;
-					if (PciReadBuffer(PCI_LIB_ADDRESS(bus, device, function, MBAROffset), 8, &MBAR) != 8)
-					{
-						// Failed reading 
-						LOG_ERROR("[XHC] Failed PciReadBuffer \r\n");
-
-						return 0;
-					}
-
-					LOG_INFO("[XHC] Found MBAR 0x%x \r\n", MBAR);
-
-					// Null last bits
-					MBAR = MBAR & 0xFFFFFFFFFFFFFF00;
-
-					// Return MBAR, we will check validity later
-					return MBAR;
-				}
-			}
-		}
-	}
-
-	return 0;
-}
-
-/*
 * Function:  getMemoryBaseAddresses
 * --------------------
 * This function writes the MBAR addresses of the XHCI controllers in the passed array pointer.
@@ -494,7 +426,7 @@ BOOLEAN getMemoryBaseAddresses(EFI_PHYSICAL_ADDRESS *mbars)
 				if (ClassCode == 0x0C && SubClass == 0x03 && ProgIf == 0x30)
 				{
 					// Found a XHCI device
-					LOG_INFO("[XHC] Found XHCI device at bus 0x%x device 0x%x function 0x%x \r\n", bus, device, function);
+					LOG_VERB("[XHC] Found XHCI device at bus 0x%x device 0x%x function 0x%x \r\n", bus, device, function);
 
 					// Try to read the MBAR
 					EFI_PHYSICAL_ADDRESS MBAR = 0;
@@ -506,7 +438,7 @@ BOOLEAN getMemoryBaseAddresses(EFI_PHYSICAL_ADDRESS *mbars)
 						continue;
 					}
 
-					LOG_INFO("[XHC] Found MBAR 0x%x \r\n", MBAR);
+					LOG_VERB("[XHC] Found MBAR 0x%x \r\n", MBAR);
 
 					// Null last bits
 					MBAR = MBAR & 0xFFFFFFFFFFFFFF00;
@@ -533,7 +465,6 @@ BOOLEAN getMemoryBaseAddresses(EFI_PHYSICAL_ADDRESS *mbars)
 
 	return FALSE;
 }
-
 
 /*
 * Function:  BeepXHCI
