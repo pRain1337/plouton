@@ -388,7 +388,7 @@ EFI_PHYSICAL_ADDRESS getDeviceContextArrayBase(EFI_PHYSICAL_ADDRESS base)
 * --------------------
 * This function writes the MBAR addresses of the XHCI controllers in the passed array pointer.
 *
-*  returns:	0 (FALSE) if it fails, otherwise it 1 (TRUE)
+*  returns:	0 (FALSE) if it fails, otherwise it returns 1 (TRUE)
 *
 */
 BOOLEAN getMemoryBaseAddresses(EFI_PHYSICAL_ADDRESS *mbars)
