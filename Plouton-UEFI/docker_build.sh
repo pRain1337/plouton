@@ -19,7 +19,10 @@ cp -r edk2-overrides/* edk2
 # Build EDK2 UEFI firmware image with Plouton
 pushd edk2
 . edksetup.sh
-build -DSMM_REQUIRE
+
+# We unfortunately need to remap the paths to host FS
+# So after building run: "sed -i "s|/root/edk2/|$(pwd)/edk2/|g" compile_commands.json"
+bear -o ../compile_commands.json build -DSMM_REQUIRE
 popd
 
 # Clean-up Plouton-related changes

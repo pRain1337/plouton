@@ -15,7 +15,7 @@ typedef struct _audioProfile {
 
 // Define function pointer types
 #ifdef __GNUC__
-typedef audioProfile_t EFIAPI (*InitAudioDriverFun)(VOID);
+typedef audioProfile_t EFIAPI (*InitAudioDriverFun)(EFI_PHYSICAL_ADDRESS);
 #else
 typedef audioProfile_t (*InitAudioDriverFun)(EFI_PHYSICAL_ADDRESS);
 #endif
