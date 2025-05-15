@@ -731,14 +731,14 @@ EFI_PHYSICAL_ADDRESS findProcess(WinCtx* ctx, const char* processname)
 				LOG_DBG("[NT] scanning process: %s\r\n", name);
 
 				// Check if this is the system process by comparing the process name to the system string
-				if (!strcmp(name, "System"))
+				if (!strcmp("System", name))
 				{
 					// Indicate the we found the system process -> no reason to reinitialize
 					foundSystemProcess = TRUE;
 				}
 
 				// Check if it's the process requested as parameter
-				if (!strcmp(name, processname))
+				if (!strcmp(processname, name))
 				{
 					LOG_INFO("[NT] found process %s\r\n", processname);
 
@@ -868,7 +868,7 @@ BOOLEAN dumpSingleProcess(const WinCtx* ctx, const char* processname, WinProc* p
 				name = (char*)(curProc + ctx->offsets.imageFileName);
 
 				// Check if it's the process requested as parameter
-				if (!strcmp(name, processname))
+				if (!strcmp(processname, name))
 				{
 					// Now get the virtual size of the process
 					EFI_PHYSICAL_ADDRESS* VirtualSize = 0;
