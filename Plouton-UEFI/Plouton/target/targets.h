@@ -16,7 +16,7 @@ typedef VOID (*CheatLoop)(VOID);
 #endif
 
 typedef struct {
-    char name[40];
+    char name[64];
     InitCheat cheatInitFun;
     CheatLoop cheatLoopFun;
     BOOLEAN initialized;

@@ -44,6 +44,10 @@ extern EFI_SMM_SYSTEM_TABLE2* gSmst2;
 // - Size definitions
 #define PAGE_SIZE 0x1000
 
+// - Pagetable operations
+#define PT_PRESENT 0x01
+#define PT_RW 0x02
+
 // Functions
 
 // - Physical memory

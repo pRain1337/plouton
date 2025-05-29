@@ -19,20 +19,16 @@
 // Signatures
 static const char* sig_dwEntityList = "48 89 35 ? ? ? ? 48 85 F6";
 static const char* sig_dwLocalPlayerController = "48 89 05 ? ? ? ? 8B 9E";
-static const char* sig_dwCSInput = "48 8B 0D ? ? ? ? 48 8B 01 FF 50 ? 8B DF"; // 48 8B 0D ? ? ? ? 48 8B 01 FF 50 ? 8B DF
-//static const char* sig_dwCSInput = "48 89 05 ? ? ? ? 0F 57 C0 0F 11 05"; // 48 89 05 ? ? ? ? 0F 57 C0 0F 11 05
+static const char* sig_dwCSInput = "48 8B 0D ? ? ? ? 48 8B 01 FF 50 ? 8B DF";
 
-
-
-// Hardcoded offsets  
-// 0x3E00000 - offset = tempoffset         
+// Hardcoded offsets       
 /* --- https://github.com/a2x/cs2-dumper/blob/main/generated/client.dll.hpp --- */
 static UINT64 ofs_m_pGameSceneNode                     = 0x328;					// C_BaseEntity             -> m_pGameSceneNode
 static UINT64 ofs_m_iHealth                            = 0x344;					// C_BaseEntity             -> m_iHealth
 static UINT64 ofs_m_iTeamNum                           = 0x3E3;					// C_BaseEntity             -> m_iTeamNum
 static UINT64 ofs_m_vecVelocity                        = 0x400;					// C_BaseEntity             -> m_vecVelocity
 
-static UINT64 ofs_m_bPawnIsAlive                       = 0x814;					// CCSPlayerController      -> m_bPawnIsAlive
+static UINT64 ofs_m_bPawnIsAlive                       = 0x82C;					// CCSPlayerController      -> m_bPawnIsAlive
 
 static UINT64 ofs_m_pClippingWeapon                    = 0x13A0;				// C_CSPlayerPawnBase       -> m_pClippingWeapon
 static UINT64 ofs_m_bGunGameImmunity                   = 0x13BC;				// C_CSPlayerPawnBase       -> m_bGunGameImmunity

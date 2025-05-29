@@ -13,6 +13,23 @@
 #include "string.h"
 
 /*
+* Function:  toLower
+* --------------------
+* Converts the given char to lowercase, used for string comparisons.
+*
+*  c:				Char to convert to lowercase
+*
+*  returns:	
+*
+* Credits to: https://github.com/Oliver-1-1/SmmInfect/blob/main/SmmInfect/string.c#L3
+* 
+*/
+INT32 toLower(INT32 c)
+{
+	return (c >= 'A' && c <= 'Z') ? (c + 'a' - 'A') : c;
+}
+
+/*
 * Function:  strcmp
 * --------------------
 * Compares two strings and returns the location of the difference.
@@ -26,10 +43,11 @@
 INT32 strcmp(const CHAR8* str1, const CHAR8* str2)
 {
 	// Increase both string positions and check if they are the same
-	for (; *str1 == *str2; ++str1, ++str2)
+	for (; toLower(*str1) == toLower(*str2); ++str1, ++str2)
 		// Check if string one has already ended -> comparison complete with no difference, return 0
 		if (*str1 == 0)
 			return 0;
+
 	// For loop ended before null-terminator of string one was reached, return the relative position of the difference
 	return *(UINT8*)str1 < *(UINT8*)str2 ? -1 : 1;
 }

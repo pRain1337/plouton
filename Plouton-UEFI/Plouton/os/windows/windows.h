@@ -44,6 +44,8 @@ typedef struct WinOffsets
 	UINT64 peb;
 	UINT64 virtualSize;
 	UINT64 vadroot;
+	UINT64 imageFilePointer;
+	UINT64 fileName;
 } WinOffsets;
 
 typedef struct ProcessData
