@@ -23,6 +23,13 @@ typedef UINT32 size_t;
 // Functions
 
 /*
+* Function:  toLower
+* --------------------
+* Converts the given char to lowercase.
+*/
+INT32 toLower(INT32 c);
+
+/*
 * Function:  strcmp
 * --------------------
 * Compares two strings and returns the position where there is a difference.

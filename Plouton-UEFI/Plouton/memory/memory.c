@@ -495,7 +495,6 @@ EFI_PHYSICAL_ADDRESS getPageTableEntry(EFI_VIRTUAL_ADDRESS address, EFI_PHYSICAL
 
 	LOG_DBG("[MEM] Dirbase: %p  VA: %p  PO: %p  PTE: %p  PT: %p  PD: %p  PDP: %p\r\n", directoryBase, address, pageOffset, pte, pt, pd, pdp);
 
-
 	// Read the PDPE from the directory base
 	EFI_PHYSICAL_ADDRESS pdpe = 0; // PML4_entry
 	if (pMemCpy((EFI_PHYSICAL_ADDRESS)&pdpe, directoryBase + 8 * pdp, sizeof(EFI_PHYSICAL_ADDRESS)) == FALSE)

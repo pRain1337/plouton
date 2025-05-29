@@ -174,7 +174,7 @@ EFI_STATUS EFIAPI SmmCallHandle(EFI_HANDLE DispatchHandle, IN CONST VOID *Contex
 				EFI_PHYSICAL_ADDRESS newDirBase = findProcess(winGlobal, targets[i].name);
 
 				// Check if the directory base is different from the initial directory base
-				if (newDirBase != 0 && newDirBase != targets[i].dirBase)
+				if (newDirBase == 0 || newDirBase != targets[i].dirBase)
 				{
 					// Directory base changed! Reset target so we reinitialize
 					LOG_INFO("[PL] target re-init! \r\n");

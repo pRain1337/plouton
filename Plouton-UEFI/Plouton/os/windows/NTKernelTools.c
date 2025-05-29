@@ -607,6 +607,8 @@ BOOLEAN setupOffsets(UINT16 NTVersion, UINT16 NTBuild, WinOffsets* winOffsets)
 		winOffsets->peb = 0x3f8;
 		winOffsets->virtualSize = 0x338;
 		winOffsets->vadroot = 0x628;
+		winOffsets->imageFilePointer = 0x448;
+		winOffsets->fileName = 0x58;
 
 		// Check if it is a build with a special offset
 		if (NTBuild >= 18362) /* Version 1903 or higher */
@@ -626,6 +628,7 @@ BOOLEAN setupOffsets(UINT16 NTVersion, UINT16 NTBuild, WinOffsets* winOffsets)
 			winOffsets->peb = 0x550;
 			winOffsets->virtualSize = 0x498;
 			winOffsets->vadroot = 0x7d8;
+			winOffsets->imageFilePointer = 0x5a0;
 		}
 
 		// Check if it is a build with a special offset
@@ -638,6 +641,7 @@ BOOLEAN setupOffsets(UINT16 NTVersion, UINT16 NTBuild, WinOffsets* winOffsets)
 			winOffsets->peb = 0x2e0;
 			winOffsets->virtualSize = 0x228;
 			winOffsets->vadroot = 0x558;
+			winOffsets->imageFilePointer = 0x330;
 		}
 
 		break;
@@ -678,43 +682,43 @@ EFI_PHYSICAL_ADDRESS findProcess(WinCtx* ctx, const char* processname)
 	while (!size || curProc != ctx->initialProcess.physProcess)
 	{
 		// First get the stackcount of the EPROCESS struct
-		EFI_PHYSICAL_ADDRESS* stackCount = 0;
+		EFI_PHYSICAL_ADDRESS stackCount = 0;
 
 		// Check if the address with the offset is valid
 		if (IsAddressValid(curProc + ctx->offsets.stackCount) == TRUE)
 		{
-			// Directly dereference the stack count
-			stackCount = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.stackCount);
+			// Read the stack count
+			pMemCpy((EFI_PHYSICAL_ADDRESS)&stackCount, curProc + ctx->offsets.stackCount, sizeof(EFI_PHYSICAL_ADDRESS));
 
-			LOG_DBG("[NT] stackCount: %d at %p\r\n", *stackCount, curProc + ctx->offsets.stackCount);
+			LOG_DBG("[NT] stackCount: %d at %p\r\n", stackCount, curProc + ctx->offsets.stackCount);
 		}
 
 		// Now get the directory base from the EPROCESS struct
-		EFI_PHYSICAL_ADDRESS* dirBase = 0;
+		EFI_PHYSICAL_ADDRESS dirBase = 0;
 
 		// Check if the address with the offset is valid
 		if (IsAddressValid(curProc + ctx->offsets.dirBase) == TRUE)
 		{
-			// Directly dereference the directory base
-			dirBase = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.dirBase);
+			// Read the directory base
+			pMemCpy((EFI_PHYSICAL_ADDRESS)&dirBase, curProc + ctx->offsets.dirBase, sizeof(EFI_PHYSICAL_ADDRESS));
 
-			LOG_DBG("[NT] dirBase: %p at %p\r\n", *dirBase, curProc + ctx->offsets.dirBase);
+			LOG_DBG("[NT] dirBase: %p at %p\r\n", dirBase, curProc + ctx->offsets.dirBase);
 		}
 
 		// Now get the process id frm the EPROCESS struct
-		EFI_PHYSICAL_ADDRESS* pid = 0;
+		EFI_PHYSICAL_ADDRESS pid = 0;
 
 		// Check if the address with the offset is valid
 		if (IsAddressValid(curProc + ctx->offsets.apl - 8) == TRUE)
 		{
 			// Directly dereference the process id
-			pid = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.apl - 8);
+			pMemCpy((EFI_PHYSICAL_ADDRESS)&pid, curProc + ctx->offsets.apl - 8, sizeof(EFI_PHYSICAL_ADDRESS));
 
-			LOG_DBG("[NT] pid: %d at %p\r\n", *pid, curProc + ctx->offsets.apl - 8);
+			LOG_DBG("[NT] pid: %d at %p\r\n", pid, curProc + ctx->offsets.apl - 8);
 		}
 
 		// Check if we either got a stack count or the process id is 4 (System process)
-		if (*stackCount || *pid == 4)
+		if (stackCount || pid == 4)
 		{
 			// Increase the size to indicate the we have found something
 			size++;
@@ -723,41 +727,110 @@ EFI_PHYSICAL_ADDRESS findProcess(WinCtx* ctx, const char* processname)
 			char* name;
 
 			// Check if the address with the offset is valid 
+			if (IsAddressValid(curProc + ctx->offsets.imageFilePointer) == TRUE)
+			{
+				// Read the pointer to the FILE_OBJECT
+				EFI_VIRTUAL_ADDRESS fileObject = 0;
+
+				pMemCpy((EFI_PHYSICAL_ADDRESS) &fileObject, curProc + ctx->offsets.imageFilePointer, sizeof(EFI_VIRTUAL_ADDRESS));
+
+				//fileObject = (EFI_VIRTUAL_ADDRESS*)(curProc + ctx->offsets.imageFilePointer);
+
+				LOG_DBG("[NT] file object: %p\r\n", fileObject);
+
+				// Check if a file object exists, not the case for some system processes
+				if (fileObject != 0)
+				{
+					// Read the UNICODE_STRING struct of the FILE_OBJECT
+					UNICODE_STRING fileName; 
+
+					vMemRead((EFI_PHYSICAL_ADDRESS)&fileName, (EFI_VIRTUAL_ADDRESS)fileObject + ctx->offsets.fileName, sizeof(UNICODE_STRING), (EFI_PHYSICAL_ADDRESS)dirBase);
+
+					// Allocate a 512 byte buffer which should be enough for 99% of the process names
+					char wBuffer[0x200];
+
+					nullBuffer((EFI_PHYSICAL_ADDRESS)wBuffer, 0x200);
+
+					// Make sure length is not bigger than our buffer
+					if (fileName.length <= 0x200)
+					{
+						LOG_DBG("[NT] File path length: %x\r\n", fileName.length);
+
+						// Copy the WCHAR buffer into our buffer
+						vMemReadForce((EFI_PHYSICAL_ADDRESS)wBuffer, (EFI_VIRTUAL_ADDRESS)fileName.buffer, fileName.length, (EFI_PHYSICAL_ADDRESS)dirBase);
+
+						int cfileNameLength = fileName.length / 2;
+
+						// Make sure the size is bigger or equal to the one we're checking against
+						if (strlen(processname) <= cfileNameLength)
+						{
+							// Now allocate a buffer half the size for the conversion
+							char cBuffer[0x100];
+
+							nullBuffer((EFI_PHYSICAL_ADDRESS)cBuffer, 0x100);
+
+							// Go through the WCHAR and copy every second byte into the CHAR Buffer
+							for (int i = 0; i < cfileNameLength; i++)
+								cBuffer[i] = ((char*)wBuffer)[i * 2];
+
+							LOG_DBG("[NT] File path: %s\r\n", cBuffer);
+							LOG_DBG("[NT] Len cBuf: %x\r\n", cfileNameLength);
+							LOG_DBG("[NT] Len procname: %x\r\n", strlen(processname));
+
+							if (!strcmp(processname, cBuffer + cfileNameLength - strlen(processname)))
+							{
+								LOG_INFO("[NT] found process file object %s\r\n", processname);
+
+								// Return the directory base to indicate we found it
+								return dirBase;
+							}
+						}
+					}
+				}
+			}
+
+			// If we did not already match it, try it with the imageFileName
 			if (IsAddressValid(curProc + ctx->offsets.imageFileName) == TRUE)
 			{
-				// Directly dereference the process name
-				name = (char*)(curProc + ctx->offsets.imageFileName);
+				char cBuffer[0x15];
 
-				LOG_DBG("[NT] scanning process: %s\r\n", name);
+				nullBuffer((EFI_PHYSICAL_ADDRESS)cBuffer, 0x15);
+
+				// Read the process name
+				pMemCpy((EFI_PHYSICAL_ADDRESS)cBuffer, curProc + ctx->offsets.imageFileName, 0x15);
+
+				LOG_DBG("[NT] scanning process: %s\r\n", cBuffer);
 
 				// Check if this is the system process by comparing the process name to the system string
-				if (!strcmp("System", name))
+				if (!strcmp("System", cBuffer))
 				{
+					LOG_INFO("[NT] found System \r\n");
+
 					// Indicate the we found the system process -> no reason to reinitialize
 					foundSystemProcess = TRUE;
 				}
 
 				// Check if it's the process requested as parameter
-				if (!strcmp(processname, name))
+				if (!strcmp(processname, cBuffer))
 				{
 					LOG_INFO("[NT] found process %s\r\n", processname);
 
 					// Return the directory base to indicate we found it
-					return *dirBase;
+					return dirBase;
 				}
 			}
 		}
 
 		// get the next process from the list
-		EFI_VIRTUAL_ADDRESS* tempVirt;
+		EFI_VIRTUAL_ADDRESS tempVirt;
 
 		// Check if the address with the offset is valid 
 		if (IsAddressValid(curProc + ctx->offsets.apl) == TRUE)
 		{
-			// Directly dereference the virtual address of the next process
-			tempVirt = (EFI_VIRTUAL_ADDRESS*)(curProc + ctx->offsets.apl);
+			// Read the virtual address of the next process
+			pMemCpy((EFI_VIRTUAL_ADDRESS)&tempVirt, curProc + ctx->offsets.apl, sizeof(EFI_VIRTUAL_ADDRESS));
 
-			virtProcess = *tempVirt;
+			virtProcess = tempVirt;
 		}
 		else
 		{
@@ -775,7 +848,7 @@ EFI_PHYSICAL_ADDRESS findProcess(WinCtx* ctx, const char* processname)
 		virtProcess = virtProcess - ctx->offsets.apl;
 
 		// Calculate the physical address using the dirbase we got
-		curProc = VTOP(virtProcess, *dirBase);
+		curProc = VTOP(virtProcess, dirBase);
 
 		LOG_VERB("[NT] curProc: %x\r\n", curProc);
 
@@ -817,43 +890,43 @@ BOOLEAN dumpSingleProcess(const WinCtx* ctx, const char* processname, WinProc* p
 	while (!size || curProc != ctx->initialProcess.physProcess)
 	{
 		// First get the stackcount of the EPROCESS struct
-		EFI_PHYSICAL_ADDRESS* stackCount = 0;
+		EFI_PHYSICAL_ADDRESS stackCount = 0;
 
 		// Check if the address with the offset is valid
 		if (IsAddressValid(curProc + ctx->offsets.stackCount) == TRUE)
 		{
-			// Directly dereference the stack count
-			stackCount = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.stackCount);
+			// Read the stack count
+			pMemCpy((EFI_PHYSICAL_ADDRESS)&stackCount, curProc + ctx->offsets.stackCount, sizeof(EFI_PHYSICAL_ADDRESS));
 
-			LOG_DBG("[NT] stackCount: %d at %p\r\n", *stackCount, curProc + ctx->offsets.stackCount);
+			LOG_DBG("[NT] stackCount: %d at %p\r\n", stackCount, curProc + ctx->offsets.stackCount);
 		}
 
 		// Now get the directory base from the EPROCESS struct
-		EFI_PHYSICAL_ADDRESS* dirBase = 0;
+		EFI_PHYSICAL_ADDRESS dirBase = 0;
 
 		// Check if the address with the offset is valid
 		if (IsAddressValid(curProc + ctx->offsets.dirBase) == TRUE)
 		{
-			// Directly dereference the directory base
-			dirBase = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.dirBase);
+			// Read the directory base
+			pMemCpy((EFI_PHYSICAL_ADDRESS)&dirBase, curProc + ctx->offsets.dirBase, sizeof(EFI_PHYSICAL_ADDRESS));
 
-			LOG_DBG("[NT] dirBase: %p at %p\r\n", *dirBase, curProc + ctx->offsets.dirBase);
+			LOG_DBG("[NT] dirBase: %p at %p\r\n", dirBase, curProc + ctx->offsets.dirBase);
 		}
 
 		// Now get the process id frm the EPROCESS struct
-		EFI_PHYSICAL_ADDRESS* pid = 0;
+		EFI_PHYSICAL_ADDRESS pid = 0;
 
 		// Check if the address with the offset is valid
 		if (IsAddressValid(curProc + ctx->offsets.apl - 8) == TRUE)
 		{
 			// Directly dereference the process id
-			pid = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.apl - 8);
+			pMemCpy((EFI_PHYSICAL_ADDRESS)&pid, curProc + ctx->offsets.apl - 8, sizeof(EFI_PHYSICAL_ADDRESS));
 
-			LOG_DBG("[NT] pid: %d at %p\r\n", *pid, curProc + ctx->offsets.apl - 8);
+			LOG_DBG("[NT] pid: %d at %p\r\n", pid, curProc + ctx->offsets.apl - 8);
 		}
 
 		// Check if we either got a stack count or the process id is 4 (System process)
-		if (*stackCount || *pid == 4)
+		if (stackCount || pid == 4)
 		{
 			// Increase the size to indicate the we have found something
 			size++;
@@ -862,41 +935,138 @@ BOOLEAN dumpSingleProcess(const WinCtx* ctx, const char* processname, WinProc* p
 			char* name;
 
 			// Check if the address with the offset is valid 
+			if (IsAddressValid(curProc + ctx->offsets.imageFilePointer) == TRUE) // ImageFilePointer
+			{
+				// Read the pointer to the FILE_OBJECT
+				EFI_VIRTUAL_ADDRESS fileObject = 0;
+
+				pMemCpy((EFI_PHYSICAL_ADDRESS)&fileObject, curProc + ctx->offsets.imageFilePointer, sizeof(EFI_VIRTUAL_ADDRESS));
+
+				LOG_DBG("[NT] file object: %p\r\n", fileObject);
+
+				// Check if a file object exists, not the case for some system processes
+				if (fileObject != 0)
+				{
+					// Read the UNICODE_STRING struct of the FILE_OBJECT
+					UNICODE_STRING fileName;
+
+					vMemRead((EFI_PHYSICAL_ADDRESS)&fileName, (EFI_VIRTUAL_ADDRESS)fileObject + ctx->offsets.fileName, sizeof(UNICODE_STRING), (EFI_PHYSICAL_ADDRESS)dirBase);
+
+					// Allocate a 512 byte buffer which should be enough for 99% of the process names
+					char wBuffer[0x200];
+
+					nullBuffer((EFI_PHYSICAL_ADDRESS)wBuffer, 0x200);
+
+					// Make sure length is not bigger than our buffer
+					if (fileName.length <= 0x200)
+					{
+						LOG_DBG("[NT] File path length: %x\r\n", fileName.length);
+
+						// Copy the WCHAR buffer into our buffer
+						vMemReadForce((EFI_PHYSICAL_ADDRESS)wBuffer, (EFI_VIRTUAL_ADDRESS)fileName.buffer, fileName.length, (EFI_PHYSICAL_ADDRESS)dirBase);
+
+						int cfileNameLength = fileName.length / 2;
+
+						// Make sure the size is bigger or equal to the one we're checking against
+						if (strlen(processname) <= cfileNameLength)
+						{
+							// Now allocate a buffer half the size for the conversion
+							char cBuffer[0x100];
+
+							nullBuffer((EFI_PHYSICAL_ADDRESS)cBuffer, 0x100);
+
+							// Go through the WCHAR and copy every second byte into the CHAR Buffer
+							for (int i = 0; i < cfileNameLength; i++)
+								cBuffer[i] = ((char*)wBuffer)[i * 2];
+
+							LOG_DBG("[NT] File path: %s\r\n", cBuffer);
+							LOG_DBG("[NT] Len cBuf: %x\r\n", cfileNameLength);
+							LOG_DBG("[NT] Len procname: %x\r\n", strlen(processname));
+
+							if (!strcmp(processname, cBuffer + cfileNameLength - strlen(processname)))
+							{
+								LOG_INFO("[NT] found process file object %s\r\n", processname);
+
+								// Now get the virtual size of the process
+								EFI_PHYSICAL_ADDRESS virtualSize = 0;
+
+								// Check if the address with the offset is valid
+								if (IsAddressValid(curProc + ctx->offsets.virtualSize) == TRUE)
+								{
+									// Read the virtual size
+									pMemCpy((EFI_PHYSICAL_ADDRESS)&virtualSize, curProc + ctx->offsets.virtualSize, sizeof(EFI_PHYSICAL_ADDRESS));
+								}
+
+								// Now get the VAD root of the process
+								EFI_PHYSICAL_ADDRESS VadROOT = 0;
+
+								// Check if the address with the offset is valid
+								if (IsAddressValid(curProc + ctx->offsets.vadroot) == TRUE)
+								{
+									// Read the VAD root
+									pMemCpy((EFI_PHYSICAL_ADDRESS)&VadROOT, curProc + ctx->offsets.vadroot, sizeof(EFI_PHYSICAL_ADDRESS));
+								}
+
+								// We successfully found our process, write the data into the process struct that was passed
+								process->dirBase = dirBase;
+								process->process = virtProcess;
+								process->physProcess = curProc;
+								process->pid = pid;
+								process->size = virtualSize;
+								process->vadRoot = VadROOT;
+
+								// Return true for successful execution
+								return TRUE;
+							}
+						}
+					}
+				}
+			}
+
+			// If we did not already match it, try it with the imageFileName
 			if (IsAddressValid(curProc + ctx->offsets.imageFileName) == TRUE)
 			{
-				// Directly dereference the process name
-				name = (char*)(curProc + ctx->offsets.imageFileName);
+				char cBuffer[0x100];
+
+				nullBuffer((EFI_PHYSICAL_ADDRESS)cBuffer, 0x100);
+
+				// Read the process name
+				pMemCpy((EFI_PHYSICAL_ADDRESS)cBuffer, curProc + ctx->offsets.imageFileName, 0x100);
+
+				LOG_DBG("[NT] scanning process: %s\r\n", cBuffer);
 
 				// Check if it's the process requested as parameter
-				if (!strcmp(processname, name))
+				if (!strcmp(processname, cBuffer))
 				{
+					LOG_INFO("[NT] found process %s\r\n", processname);
+
 					// Now get the virtual size of the process
-					EFI_PHYSICAL_ADDRESS* VirtualSize = 0;
+					EFI_PHYSICAL_ADDRESS virtualSize = 0;
 
 					// Check if the address with the offset is valid
 					if (IsAddressValid(curProc + ctx->offsets.virtualSize) == TRUE)
 					{
-						// Directly dereference the virtual size
-						VirtualSize = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.virtualSize);
+						// Read the virtual size
+						pMemCpy((EFI_PHYSICAL_ADDRESS)&virtualSize, curProc + ctx->offsets.virtualSize, sizeof(EFI_PHYSICAL_ADDRESS));
 					}
 
 					// Now get the VAD root of the process
-					EFI_PHYSICAL_ADDRESS* VadROOT = 0;
+					EFI_PHYSICAL_ADDRESS VadROOT = 0;
 
 					// Check if the address with the offset is valid
 					if (IsAddressValid(curProc + ctx->offsets.vadroot) == TRUE)
 					{
-						// Directly dereference the VAD root
-						VadROOT = (EFI_PHYSICAL_ADDRESS*)(curProc + ctx->offsets.vadroot);
+						// Read the VAD root
+						pMemCpy((EFI_PHYSICAL_ADDRESS)&VadROOT, curProc + ctx->offsets.vadroot, sizeof(EFI_PHYSICAL_ADDRESS));
 					}
 
 					// We successfully found our process, write the data into the process struct that was passed
-					process->dirBase = *dirBase;
+					process->dirBase = dirBase;
 					process->process = virtProcess;
 					process->physProcess = curProc;
-					process->pid = *pid;
-					process->size = *VirtualSize;
-					process->vadRoot = *VadROOT;
+					process->pid = pid;
+					process->size = virtualSize;
+					process->vadRoot = VadROOT;
 
 					// Return true for successful execution
 					return TRUE;
@@ -905,15 +1075,15 @@ BOOLEAN dumpSingleProcess(const WinCtx* ctx, const char* processname, WinProc* p
 		}
 
 		// get the next process from the list
-		EFI_VIRTUAL_ADDRESS* tempVirt;
+		EFI_VIRTUAL_ADDRESS tempVirt;
 
 		// Check if the address with the offset is valid 
 		if (IsAddressValid(curProc + ctx->offsets.apl) == TRUE)
 		{
-			// Directly dereference the virtual address of the next process
-			tempVirt = (EFI_VIRTUAL_ADDRESS*)(curProc + ctx->offsets.apl);
+			// Read the virtual address of the next process
+			pMemCpy((EFI_VIRTUAL_ADDRESS)&tempVirt, curProc + ctx->offsets.apl, sizeof(EFI_VIRTUAL_ADDRESS));
 
-			virtProcess = *tempVirt;
+			virtProcess = tempVirt;
 		}
 		else
 		{
@@ -931,9 +1101,9 @@ BOOLEAN dumpSingleProcess(const WinCtx* ctx, const char* processname, WinProc* p
 		virtProcess = virtProcess - ctx->offsets.apl;
 
 		// Calculate the physical address using the dirbase we got
-		curProc = VTOP(virtProcess, *dirBase);
+		curProc = VTOP(virtProcess, dirBase);
 
-		LOG_VERB("[NT] curProc: %p\r\n", curProc);
+		LOG_VERB("[NT] curProc: %x\r\n", curProc);
 
 		// Check if we got a valid physical address
 		if (!curProc)
