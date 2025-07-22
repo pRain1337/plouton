@@ -30,6 +30,7 @@
   hardware/mouse/dummy.c
   hardware/mouse/logitech_g_pro.c
   hardware/mouse/logitech_g_pro_superlight.c
+  logging/memoryLog.c
 
 [Packages]
   MdePkg/MdePkg.dec

@@ -1,0 +1,45 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Common UI -->
+    <system:String x:Key="WindowTitle">Plouton Log Viewer</system:String>
+    <system:String x:Key="Header">Plouton Log Viewer</system:String>
+    <system:String x:Key="LogAddressLabel">Log buffer physical address:</system:String>
+    <system:String x:Key="GetAddressButton">Get Address</system:String>
+    <system:String x:Key="StatusLabel">Status:</system:String>
+    <system:String x:Key="StartButton">Start</system:String>
+    <system:String x:Key="PauseButton">Pause</system:String>
+    <system:String x:Key="ClearButton">Clear</system:String>
+    <system:String x:Key="LanguageLabel">Language:</system:String>
+
+    <!-- Status Messages -->
+    <system:String x:Key="StatusNotStarted">Not started.</system:String>
+    <system:String x:Key="StatusAddressInvalid">Address is not a valid 64-bit hexadecimal value.</system:String>
+    <system:String x:Key="StatusGettingAddress">Getting address...</system:String>
+    <system:String x:Key="StatusAddressSuccess">Successfully obtained address: </system:String>
+    <system:String x:Key="StatusAddressFailed">Failed to get address. WinRing0 driver not found or failed to load.</system:String>
+    <system:String x:Key="StatusMemoryReadFailed">Failed to read memory</system:String>
+    <system:String x:Key="StatusMonitoring">Monitoring...</system:String>
+    <system:String x:Key="StatusPaused">Paused.</system:String>
+    <system:String x:Key="StatusCopyFailed">Failed to copy to clipboard</system:String>
+    <system:String x:Key="StatusPrivilegeFailed">Failed to get SeSystemEnvironmentPrivilege. Please run as Administrator.</system:String>
+    <system:String x:Key="StatusUefiVarNotFound">UEFI variable 'PloutonLogAddress' not found. Is the driver running?</system:String>
+    <system:String x:Key="StatusUefiError">UEFI variable error ({0}): {1}</system:String>
+    <system:String x:Key="StatusUefiVarSizeError">UEFI variable size mismatch. Expected {1}, got {0}.</system:String>
+    <system:String x:Key="StatusDriverError">Driver Error</system:String>
+    <system:String x:Key="StatusReaderNotInitialized">Reader not initialized. Please enter a valid address and start.</system:String>
+    <system:String x:Key="StatusReading">Reading logs...</system:String>
+    <system:String x:Key="StatusAddressCopied">Address script copied to clipboard.</system:String>
+    <system:String x:Key="StatusAddressFail">Failed to get address. See status for details.</system:String>
+
+    <!-- New button -->
+    <system:String x:Key="CopyButton">Copy</system:String>
+    <system:String x:Key="CopyButtonText">Copy All</system:String>
+    <system:String x:Key="SaveButtonText">Save As...</system:String>
+    <system:String x:Key="SaveLogTitle">Save Log As</system:String>
+    <system:String x:Key="StatusLogsCopied">All logs copied to clipboard.</system:String>
+    <system:String x:Key="StatusLogSaved">Log saved to {0}.</system:String>
+    <system:String x:Key="StatusSaveFailed">Failed to save log file</system:String>
+
+</ResourceDictionary> 
