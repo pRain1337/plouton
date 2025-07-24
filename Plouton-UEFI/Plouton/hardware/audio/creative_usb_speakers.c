@@ -16,7 +16,7 @@
 *  returns:	The audioProfile struct, initialized set As TRUE if it was found
 *
 */
-audioProfile_t EFIAPI initCreativeUsbSpeakersAudioXHCI(EFI_PHYSICAL_ADDRESS MBAR)
+audioProfile_t initCreativeUsbSpeakersAudioXHCI(EFI_PHYSICAL_ADDRESS MBAR)
 {
 	// This implementation is based on the following documents:
 	// - Intel 600 series datasheet see: https://www.intel.com/content/www/us/en/content-details/742460/intel-600-series-chipset-family-for-iot-edge-platform-controller-hub-pch-datasheet-volume-2-of-2.html

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "E:\\SMM-Cheat\\Plouton-UEFI\\PloutonLogViewer\\PloutonLogViewer.csproj": {}
+    "D:\\SMM\\plouton\\PloutonLogViewer\\PloutonLogViewer.csproj": {}
   },
   "projects": {
-    "E:\\SMM-Cheat\\Plouton-UEFI\\PloutonLogViewer\\PloutonLogViewer.csproj": {
+    "D:\\SMM\\plouton\\PloutonLogViewer\\PloutonLogViewer.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\SMM-Cheat\\Plouton-UEFI\\PloutonLogViewer\\PloutonLogViewer.csproj",
+        "projectUniqueName": "D:\\SMM\\plouton\\PloutonLogViewer\\PloutonLogViewer.csproj",
         "projectName": "PloutonLogViewer",
-        "projectPath": "E:\\SMM-Cheat\\Plouton-UEFI\\PloutonLogViewer\\PloutonLogViewer.csproj",
+        "projectPath": "D:\\SMM\\plouton\\PloutonLogViewer\\PloutonLogViewer.csproj",
         "packagesPath": "C:\\Users\\27536\\.nuget\\packages\\",
-        "outputPath": "E:\\SMM-Cheat\\Plouton-UEFI\\PloutonLogViewer\\obj\\",
+        "outputPath": "D:\\SMM\\plouton\\PloutonLogViewer\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

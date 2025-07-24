@@ -6,16 +6,20 @@ Copyright (c) pRain1337 & Jussihi  All rights reserved.
 
 // Our includes
 #include "plouton.h"
-#include "logging/memoryLog.h"
+#include "general/config.h"
 
-// From memoryLog.c, we need access to the global buffer address
+#if ENABLE_MEMORY_LOG
+#include "logging/memory_log.h"
+
+// From memory_log.c, we need access to the global buffer address
 // We use an extern declaration to make it accessible here.
 extern EFI_PHYSICAL_ADDRESS gMemoryLogBufferAddress;
 
 // This is the unique GUID for our UEFI variable.
 // {71245e36-47a7-4458-8588-74a4411b9332}
-STATIC CONST EFI_GUID gPloutonLogAddressGuid = 
+STATIC CONST EFI_GUID gPloutonLogAddressGuid =
   { 0x71245e36, 0x47a7, 0x4458, { 0x85, 0x88, 0x74, 0xa4, 0x41, 0x1b, 0x93, 0x32 } };
+#endif
 
 /*
  * Just a workaround for stupid MVSC pragmas
@@ -507,6 +511,7 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE* Syste
 	// Initialize the variable to keep track of the SMIs
 	currSMIamount = 0;
 
+#if ENABLE_MEMORY_LOG
 	// ***************************************************
 	// * Initialize Memory Logging
 	// ***************************************************
@@ -539,6 +544,7 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE* Syste
 			LOG_INFO("[PL] Log address 0x%llx stored in UEFI variable 'PloutonLogAddress'.\n", gMemoryLogBufferAddress);
 		}
 	}
+#endif // ENABLE_MEMORY_LOG
 
 	// Test logging
 	LOG_INFO("Plouton DriverEntry finished \r\n");
