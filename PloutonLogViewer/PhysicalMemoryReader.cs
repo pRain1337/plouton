@@ -22,7 +22,7 @@ namespace PloutonLogViewer
         /// </summary>
         private const uint IoctlReadPhysicalMemory = 0x222808;
 
-        private SafeFileHandle _handle;
+        private SafeFileHandle _handle = null!;
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         private static extern SafeFileHandle CreateFile(

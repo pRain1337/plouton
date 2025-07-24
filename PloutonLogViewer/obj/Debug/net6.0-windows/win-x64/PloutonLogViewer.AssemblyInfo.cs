@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PloutonLogViewer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+07c9a5d14a58d71b231e13817c2ba5faa8a73f42")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6df0f4df130f46f4ca6fc388664f9858db8cbe38")]
 [assembly: System.Reflection.AssemblyProductAttribute("PloutonLogViewer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PloutonLogViewer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
