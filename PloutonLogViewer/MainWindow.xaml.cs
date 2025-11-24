@@ -22,10 +22,12 @@ namespace PloutonLogViewer
         private readonly PhysicalMemoryReader _memoryReader;
         private readonly DispatcherTimer _logPollTimer;
         private ulong _physicalAddress;
-        private uint _lastReadOffset;
+        private uint _lastSeenTimestamp;
         private bool _isMonitoring;
         private bool _isReaderInitialized = false;
-        private const uint LogBufferSize = 1 * 1024 * 1024; // 1MB, must match driver
+        private const uint LogBufferSize = 8 * 1024 * 1024; // Match default MEM_LOG_BUFFER_SIZE
+        private const int LogEntryHeaderSize = 8; // sizeof(MEMORY_LOG_ENTRY_HEADER)
+        private const int MaxLogEntrySize = 1024; // MAX_LOG_ENTRY_SIZE
 
         public MainWindow()
         {
@@ -202,7 +204,7 @@ namespace PloutonLogViewer
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
             LogTextBox.Clear();
-            _lastReadOffset = 0; // Reset read position as well
+            _lastSeenTimestamp = 0; // Reset read position as well
         }
 
         private void CopyButton_Click(object sender, RoutedEventArgs e)
@@ -296,7 +298,7 @@ namespace PloutonLogViewer
             if (ulong.TryParse(addressHex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _physicalAddress))
             {
                 UpdateStatus(GetResource("StatusAddressSuccess") + $"0x{_physicalAddress:X}", false);
-                _lastReadOffset = 0; // Reset read position every time a new valid address is set
+                _lastSeenTimestamp = 0; // Reset read position every time a new valid address is set
                 StartPauseButton.IsEnabled = true;
                 
                 // Read existing logs once to show boot-time logs
@@ -323,27 +325,54 @@ namespace PloutonLogViewer
                 byte[] logData = new byte[LogBufferSize];
                 _memoryReader.ReadPhysicalMemory(_physicalAddress, logData);
 
-                // The log from SMM is a stream of ASCII characters, terminated by one or more nulls.
-                // We treat the entire buffer as a single string and find its end.
-                string fullLogText = Encoding.ASCII.GetString(logData).TrimEnd('\0');
+                // Parse structured log entries: MEMORY_LOG_ENTRY_HEADER + ASCII payload
+                var sb = new StringBuilder();
+                int cursor = 0;
 
-                if (fullLogText.Length > _lastReadOffset)
+                while (cursor + LogEntryHeaderSize <= logData.Length)
                 {
-                    // Standard case: new text has been appended.
-                    string newText = fullLogText.Substring((int)_lastReadOffset);
-                    LogTextBox.AppendText(newText);
-                    LogTextBox.ScrollToEnd();
-                    _lastReadOffset = (uint)fullLogText.Length;
+                    uint timestamp = BitConverter.ToUInt32(logData, cursor);
+                    ushort entryLength = BitConverter.ToUInt16(logData, cursor + 4);
+                    byte logLevel = logData[cursor + 6];
+                    // byte reserved = logData[cursor + 7];
+
+                    // Stop if buffer region is empty
+                    if (timestamp == 0 || entryLength == 0)
+                    {
+                        break;
+                    }
+
+                    // Basic sanity checks
+                    if (entryLength < LogEntryHeaderSize || entryLength > MaxLogEntrySize || cursor + entryLength > logData.Length)
+                    {
+                        break;
+                    }
+
+                    // Detect clear/reset: timestamp decreased
+                    if (_lastSeenTimestamp != 0 && timestamp < _lastSeenTimestamp)
+                    {
+                        LogTextBox.Clear();
+                        _lastSeenTimestamp = 0;
+                    }
+
+                    if (timestamp > _lastSeenTimestamp)
+                    {
+                        int payloadLength = entryLength - LogEntryHeaderSize;
+                        string message = Encoding.ASCII.GetString(logData, cursor + LogEntryHeaderSize, payloadLength).TrimEnd('\0');
+                        string levelTag = LogLevelToTag(logLevel);
+
+                        sb.AppendLine($"[{timestamp:000000}] [{levelTag}] {message}");
+                        _lastSeenTimestamp = timestamp;
+                    }
+
+                    cursor += entryLength;
                 }
-                else if (fullLogText.Length < _lastReadOffset)
+
+                if (sb.Length > 0)
                 {
-                    // Wrap-around case: the buffer was cleared and started from the beginning.
-                    // The new content is the entire current buffer.
-                    LogTextBox.AppendText(fullLogText);
+                    LogTextBox.AppendText(sb.ToString());
                     LogTextBox.ScrollToEnd();
-                    _lastReadOffset = (uint)fullLogText.Length;
                 }
-                // If fullLogText.Length == _lastReadOffset, do nothing.
             }
             catch (Exception ex)
             {
@@ -399,6 +428,18 @@ namespace PloutonLogViewer
             });
         }
         #endregion
+
+        private static string LogLevelToTag(byte logLevel)
+        {
+            return logLevel switch
+            {
+                1 => "ERR",
+                2 => "INF",
+                3 => "VRB",
+                4 => "DBG",
+                _ => $"L{logLevel}"
+            };
+        }
     }
 
     internal static class NativeMethods

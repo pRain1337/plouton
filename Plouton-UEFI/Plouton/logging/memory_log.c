@@ -12,6 +12,7 @@ EFI_PHYSICAL_ADDRESS gMemoryLogBufferAddress = 0;
 UINTN gMemoryLogCursor = 0;
 UINTN gMemoryLogWrapCount = 0;
 UINT32 gMemoryLogTimestamp = 0;
+UINTN gMemoryLogDroppedEntries = 0;
 
 EFI_STATUS EFIAPI InitMemoryLog(IN EFI_BOOT_SERVICES* gBS)
 {
@@ -63,12 +64,18 @@ STATIC VOID WriteLogEntry(IN UINT8 LogLevel, IN CONST CHAR8* LogData, IN UINTN L
         return;
     }
 
+    if (LogLevel < MEMORY_LOG_MIN_LEVEL)
+    {
+        return;
+    }
+
     // Calculate total entry size (header + data)
     UINTN totalEntrySize = sizeof(MEMORY_LOG_ENTRY_HEADER) + LogDataLength;
 
     // Check if entry is too large
     if (totalEntrySize > MAX_LOG_ENTRY_SIZE)
     {
+        gMemoryLogDroppedEntries++;
         return;
     }
 
@@ -83,6 +90,7 @@ STATIC VOID WriteLogEntry(IN UINT8 LogLevel, IN CONST CHAR8* LogData, IN UINTN L
     // Ensure we don't write beyond buffer boundaries
     if (gMemoryLogCursor + totalEntrySize > MEM_LOG_BUFFER_SIZE)
     {
+        gMemoryLogDroppedEntries++;
         return; // Entry too large for remaining space
     }
 
@@ -143,6 +151,11 @@ VOID EFIAPI MemoryLogPrintEx(IN UINT8 LogLevel, IN CONST CHAR8* Format, ...)
         return;
     }
 
+    if (LogLevel < MEMORY_LOG_MIN_LEVEL)
+    {
+        return;
+    }
+
     VA_LIST Marker;
     CHAR8 logEntryBuffer[MAX_LOG_ENTRY_SIZE - sizeof(MEMORY_LOG_ENTRY_HEADER)];
     UINTN logEntryLength;
@@ -161,7 +174,7 @@ VOID EFIAPI MemoryLogPrintEx(IN UINT8 LogLevel, IN CONST CHAR8* Format, ...)
     WriteLogEntry(LogLevel, logEntryBuffer, logEntryLength);
 }
 
-VOID EFIAPI GetMemoryLogStats(OUT UINTN* TotalSize, OUT UINTN* UsedSize, OUT UINTN* WrapCount)
+VOID EFIAPI GetMemoryLogStats(OUT UINTN* TotalSize, OUT UINTN* UsedSize, OUT UINTN* WrapCount, OUT UINTN* Dropped)
 {
     if (TotalSize != NULL)
     {
@@ -184,6 +197,11 @@ VOID EFIAPI GetMemoryLogStats(OUT UINTN* TotalSize, OUT UINTN* UsedSize, OUT UIN
     {
         *WrapCount = gMemoryLogWrapCount;
     }
+
+    if (Dropped != NULL)
+    {
+        *Dropped = gMemoryLogDroppedEntries;
+    }
 }
 
 VOID EFIAPI ClearMemoryLog(VOID)
@@ -197,6 +215,7 @@ VOID EFIAPI ClearMemoryLog(VOID)
         gMemoryLogCursor = 0;
         gMemoryLogWrapCount = 0;
         gMemoryLogTimestamp = 0;
+        gMemoryLogDroppedEntries = 0;
 
         // Log the clear operation
         SerialPrintf("\033[1;33m(I) [MEMLOG] Memory log buffer cleared\n\033[0;39;49m");

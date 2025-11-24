@@ -28,6 +28,9 @@ typedef struct {
 // Maximum size for a single log entry (including header)
 #define MAX_LOG_ENTRY_SIZE 1024
 
+// Track dropped entries (too large / no space)
+extern UINTN gMemoryLogDroppedEntries;
+
 /**
  * @brief Initializes the memory logging facility.
  * 
@@ -69,8 +72,9 @@ VOID EFIAPI MemoryLogPrintEx(IN UINT8 LogLevel, IN CONST CHAR8* Format, ...);
  * @param TotalSize Pointer to receive total buffer size.
  * @param UsedSize Pointer to receive currently used size.
  * @param WrapCount Pointer to receive number of buffer wraps.
+ * @param Dropped Pointer to receive number of dropped entries (optional).
  */
-VOID EFIAPI GetMemoryLogStats(OUT UINTN* TotalSize, OUT UINTN* UsedSize, OUT UINTN* WrapCount);
+VOID EFIAPI GetMemoryLogStats(OUT UINTN* TotalSize, OUT UINTN* UsedSize, OUT UINTN* WrapCount, OUT UINTN* Dropped);
 
 /**
  * @brief Clears the memory log buffer.
@@ -83,7 +87,7 @@ VOID EFIAPI ClearMemoryLog(VOID);
 #define InitMemoryLog(gBS) EFI_SUCCESS
 #define MemoryLogPrint(Format, ...)
 #define MemoryLogPrintEx(LogLevel, Format, ...)
-#define GetMemoryLogStats(TotalSize, UsedSize, WrapCount)
+#define GetMemoryLogStats(TotalSize, UsedSize, WrapCount, Dropped)
 #define ClearMemoryLog()
 
 #endif // ENABLE_MEMORY_LOG

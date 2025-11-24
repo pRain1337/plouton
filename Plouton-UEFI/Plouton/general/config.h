@@ -43,7 +43,15 @@
  * Larger buffers provide more log history but consume more memory.
  * Choose based on your debugging needs and available system memory.
  */
-#define MEMORY_LOG_BUFFER_SIZE MEM_LOG_SIZE_4MB
+#define MEMORY_LOG_BUFFER_SIZE MEM_LOG_SIZE_8MB
+
+/*
+ * Minimum log level that will be written to the in-memory log buffer.
+ * Use LOG_LEVEL_ERROR / LOG_LEVEL_INFO / LOG_LEVEL_VERB / LOG_LEVEL_DBG.
+ * This is independent from SERIAL_DEBUG_LEVEL to allow keeping serial chatty
+ * while trimming what gets persisted in memory.
+ */
+#define MEMORY_LOG_MIN_LEVEL LOG_LEVEL_INFO
 
 // Cheat features
 #define ENABLE_SOUND FALSE
