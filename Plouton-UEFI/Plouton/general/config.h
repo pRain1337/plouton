@@ -30,7 +30,7 @@
  * When enabled, error messages will be stored in a memory buffer that can be
  * inspected with external tools.
  */
-#define ENABLE_MEMORY_LOG 1
+#define ENABLE_MEMORY_LOG 0
 
 /*
  * Memory log buffer size configuration.
