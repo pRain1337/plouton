@@ -1,0 +1,115 @@
+<Window x:Class="PloutonLogViewer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PloutonLogViewer"
+        mc:Ignorable="d"
+        Title="{DynamicResource WindowTitle}" Height="600" Width="800"
+        WindowStartupLocation="CenterScreen"
+        Background="#FF1E1E1E">
+    <Window.Resources>
+        <Style x:Key="ModernButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#FF3E3E42"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FF4F4F53"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#FF2A2A2D"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ModernTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="#FF2D2D30"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CaretBrush" Value="White"/>
+            <Setter Property="SelectionBrush" Value="#FF007ACC"/>
+        </Style>
+
+        <Style x:Key="LogTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ModernTextBoxStyle}">
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="AcceptsReturn" Value="True"/>
+            <Setter Property="TextWrapping" Value="NoWrap"/>
+        </Style>
+
+        <Style TargetType="StatusBar">
+            <Setter Property="Background" Value="#101010"/>
+        </Style>
+        <Style TargetType="StatusBarItem">
+            <Setter Property="Foreground" Value="#AAAAAA"/>
+        </Style>
+    </Window.Resources>
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Vertical" HorizontalAlignment="Center" Margin="0,20,0,0">
+            <TextBlock Text="{DynamicResource Header}" Foreground="White" FontSize="24" FontWeight="Bold"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="20,20,20,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{DynamicResource LogAddressLabel}" Grid.Column="0" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <TextBox Name="AddressTextBox" Grid.Column="1" Style="{StaticResource ModernTextBoxStyle}" TextChanged="AddressTextBox_TextChanged" />
+            <Button Name="GetAddressButton" Content="{DynamicResource GetAddressButton}" Grid.Column="2" Style="{StaticResource ModernButtonStyle}" Margin="10,0,0,0" Click="GetAddressButton_Click"/>
+        </Grid>
+
+        <DockPanel Grid.Row="2" Margin="20,0,20,10" MaxHeight="80">
+            <Button Name="CopyStatusButton" Content="{DynamicResource CopyButton}" Style="{StaticResource ModernButtonStyle}" DockPanel.Dock="Right" Margin="10,0,0,0" VerticalAlignment="Top" Click="CopyStatusButton_Click" Visibility="Collapsed"/>
+            <TextBlock Text="{DynamicResource StatusLabel}" Foreground="White" FontWeight="Bold" VerticalAlignment="Top" Margin="0,4,0,0"/>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="5,0,0,0">
+                 <TextBlock Name="StatusText" Text="{DynamicResource StatusNotStarted}" Foreground="Gray" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </ScrollViewer>
+        </DockPanel>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+            <Button Name="StartPauseButton" Content="{DynamicResource StartButton}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,10,0" Click="StartPauseButton_Click"/>
+            <Button Name="ClearButton" Content="{DynamicResource ClearButton}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,10,0" Click="ClearButton_Click"/>
+            <Button Name="CopyButton" Content="{DynamicResource CopyButtonText}" Style="{StaticResource ModernButtonStyle}" Margin="10,0,10,0" Click="CopyButton_Click"/>
+            <Button Name="SaveButton" Content="{DynamicResource SaveButtonText}" Style="{StaticResource ModernButtonStyle}" Margin="0,0,10,0" Click="SaveButton_Click"/>
+            <TextBlock Text="{DynamicResource LanguageLabel}" Foreground="White" VerticalAlignment="Center" Margin="20,0,5,0"/>
+            <ComboBox Name="LanguageComboBox" Width="120" SelectionChanged="LanguageComboBox_SelectionChanged" VerticalAlignment="Center">
+                <ComboBoxItem Content="English" Tag="en-US"/>
+                <ComboBoxItem Content="中文 (Chinese)" Tag="zh-CN"/>
+            </ComboBox>
+        </StackPanel>
+
+        <TextBox Name="LogTextBox" Grid.Row="4" Style="{StaticResource LogTextBoxStyle}" IsReadOnly="True" Margin="20,0,20,20"/>
+    </Grid>
+</Window> 

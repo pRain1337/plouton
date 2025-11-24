@@ -1,0 +1,46 @@
+# Build results
+bin/
+obj/
+Debug/
+Release/
+*.user
+*.userosscache
+*.suo
+*.cache
+*.pidb
+*.log
+*.sln.docstates
+
+# VS generated
+.vs/
+_ReSharper*/
+*.resharper
+*.DotSettings.user
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+# Rider / JetBrains
+.idea/
+
+# Others
+*.tmp
+*.bak
+*.swp
+*.orig
+*.psess
+*.vsp
+*.vspscc
+*.pubxml.user
+*.Publish.xml
+TestResult*/
+TestResults*/
+*.coverage
+*.coveragexml
+
+# Local configuration
+*.local.json
