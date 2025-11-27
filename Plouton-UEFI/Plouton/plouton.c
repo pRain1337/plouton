@@ -540,9 +540,11 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE* Syste
 	// ***************************************************
 	if (gMemoryLogBufferAddress != 0)
 	{
+		// SetVariable expects a non-const GUID pointer
+		EFI_GUID logAddressGuid = gPloutonLogAddressGuid;
 		status = gST->RuntimeServices->SetVariable(
 			L"PloutonLogAddress",
-			&gPloutonLogAddressGuid,
+			&logAddressGuid,
 			EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
 			sizeof(EFI_PHYSICAL_ADDRESS),
 			&gMemoryLogBufferAddress
