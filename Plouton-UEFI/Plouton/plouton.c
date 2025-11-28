@@ -8,6 +8,8 @@ Copyright (c) pRain1337 & Jussihi  All rights reserved.
 #include "plouton.h"
 #include "general/config.h"
 
+static BOOLEAN gUsbInitDone = FALSE;
+
 #if ENABLE_MEMORY_LOG
 #include "logging/memory_log.h"
 
@@ -167,12 +169,24 @@ BOOLEAN FindTarget()
 */
 EFI_STATUS EFIAPI SmmCallHandle(EFI_HANDLE DispatchHandle, IN CONST VOID *Context OPTIONAL, IN OUT VOID *CommBuffer OPTIONAL, IN OUT UINTN *CommBufferSize OPTIONAL)
 {
-	// Clear the status bits in the PCH to prevent a system halt
-	pchClearUSB();
+	// Clear/init USB timer only after OS is up to avoid breaking preboot keyboard
+	if (gUsbInitDone == FALSE && setupWindows == TRUE)
+	{
+		if (pchInitUSB() == FALSE)
+		{
+			LOG_ERROR("[PL] Failed initializing USB timer \r\n");
+		}
+		else
+		{
+			gUsbInitDone = TRUE;
+		}
+	}
 
-	// Initialize USB Timer to get more SMIs
-	if (pchInitUSB() == FALSE)
-		LOG_ERROR("[PL] Failed initializing USB timer \r\n");
+	if (gUsbInitDone)
+	{
+		// Clear the status bits in the PCH to prevent a system halt
+		pchClearUSB();
+	}
 
 	currSMIamount++;
 
@@ -526,9 +540,11 @@ EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE* Syste
 	// ***************************************************
 	if (gMemoryLogBufferAddress != 0)
 	{
+		// SetVariable expects a non-const GUID pointer
+		EFI_GUID logAddressGuid = gPloutonLogAddressGuid;
 		status = gST->RuntimeServices->SetVariable(
 			L"PloutonLogAddress",
-			&gPloutonLogAddressGuid,
+			&logAddressGuid,
 			EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
 			sizeof(EFI_PHYSICAL_ADDRESS),
 			&gMemoryLogBufferAddress
